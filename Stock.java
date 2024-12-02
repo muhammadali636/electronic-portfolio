@@ -1,124 +1,47 @@
 package Simutrade;
 
 /**
- * class for stocks
+ * Class for representing stocks, extending the Investment class.
  */
-public class Stock {
-    //instance variables set to pvt
-    private String symbol, name;
-    private int quantity;
-    private double price, bookValue;
+public class Stock extends Investment {
 
     /**
-     *constructor for Stock class to initialize instance of stock
-     *@param symbol stock symbol
-     *@param name stock name
-     *@param quantity num of shares
-     *@param price current price per share
+     *CONSTRUCTORS to initialize a stock.
+     *@param symbol   symbol
+     *@param name  name
+     *@param quantity quant
+     *@param price  price/share
      */
     public Stock(String symbol, String name, int quantity, double price) {
-        this.symbol = symbol;
-        this.name = name;
-        this.quantity = quantity;
-        this.price = price;
-        this.bookValue = quantity * price + 9.99; //9.99 is assumed commission
+        super(symbol, name, quantity, price);
     }
 
     /**
-     *getter metjhod for stock symbol
-     *@return stock symbol
+     *Calculates the book value of the stock, including a commission fee. OVERRIDES
+     *@param quantity The quantity of shares
+     *@param price    The price per share
+     *@return The calculated book value including commission
      */
-    public String getSymbol() {
-        return symbol;
+    protected double calculateBookValue(int quantity, double price) {
+        double total;
+        total = quantity *price + 9.99;
+        return total; //commission for stocks 9.99
     }
 
     /**
-     *getter method for stock name
-     *@return stock name
+     *calc gain oVERRIDES
+     *@return The calculated gain based on current price and book value
      */
-    public String getName() {
-        return name;
+    public double calculateGain() {
+        double total;
+        total = quantity * price - bookValue;
+        return total;
     }
-
     /**
-     *getter method for num of shares
-     *@return num of shares
-     */
-    public int getQuantity() {
-        return quantity;
-    }
-
-    /**
-     *getter method for price per share
-     *@return price per share
-     */
-    public double getPrice() {
-        return price;
-    }
-
-    /**
-     *getter for book value
-     *@return book value
-     */
-    public double getBookValue() {
-        return bookValue;
-    }
-
-    /**
-     *setter for num of shares
-     *@param quantity new num of shares
-     */
-    public void setQuantity(int quantity) {
-        this.quantity = quantity;
-    }
-
-    /**
-     *setter for price per share
-     *@param price new price per share
-     */
-    public void setPrice(double price) {
-        this.price = price;
-    }
-
-    /**
-     *setter for book value
-     *@param bookValue new book value
-     */
-    public void setBookValue(double bookValue) {
-        this.bookValue = bookValue;
-    }
-
-    /**
-     *method to calcualte stock gain
-     *@return gain value
-     */
-    public double calculateStockGain() {
-        return (quantity * price) - bookValue; 
-    }
-
-    /**
-     *equals method to compare two stock objects based on symbols
-     *@param otherObject object to compare
-     *@return true if stocks have same symbol (ignore case), false otherwise
-     */
-    public boolean equals(Object otherObject) {
-        if (otherObject == null) {
-            return false;
-        } 
-        else if (getClass() != otherObject.getClass()) {
-            return false;
-        } 
-        else {
-            Stock otherStock = (Stock) otherObject;
-            return this.symbol.equalsIgnoreCase(otherStock.symbol);
-        }
-    }
-
-    /**
-     *toString method for printing stock details
-     *@return string representation of stock
+     *Returns a string representation of the stock, including its symbol, name, quantity, and price. OVERRIDES
+     *@return A string describing the stock
      */
     public String toString() {
-        return name + " (" + symbol + ", " + quantity + " @ " + String.format("%.2f", price) + ")";
+        return "Stock: " + super.toString();
     }
 }
