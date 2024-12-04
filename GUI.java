@@ -1,4 +1,4 @@
-package ePortfolio;
+package Simutrade;
 import java.util.InputMismatchException;
 import javax.swing.JFrame;
 import javax.swing.JButton;

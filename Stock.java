@@ -1,4 +1,4 @@
-package ePortfolio;
+package Simutrade;
 
 /**
  * Class for representing stocks, extending the Investment class.

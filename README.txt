@@ -1,4 +1,4 @@
-WELCOME TO EPORTFOLIO!
+WELCOME TO SIMUTRADE!
 
 (1)General Problem
 I want to make it easier to manage investments, so I made this program. This program simulates an investment portfolio management system that handles simple buy, sell, update, and search functionalities for stocks and mutual funds.
@@ -39,15 +39,15 @@ Investment.java: A superclass for all types of investments, including stocks and
 hi.txt showing you whats the program does as an exmaple.
 
 
-Download eportfolio tar file. A folder should be extracted.
+Download Simutrade tar file. A folder should be extracted.
 
 Compiling the Program:
 Open a terminal.
-cd into the location where the ePortfolio folder is stored (for example downloads, or desktop).
+cd into the location where the Simutrade folder is stored (for example downloads, or desktop).
 
-Compile: javac ePortfolio/*.java.
+Compile: javac Simutrade/*.java.
 
-Running the Program: java ePortfolio.GUI
+Running the Program: java Simutrade.GUI
 
 A GUI will load and you will be greated by a welcome page. 
 Hover over to commands and you will see the menu. It should show buy investment, sell investment, update investments, get total gain, search investments, quit. 

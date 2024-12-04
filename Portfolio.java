@@ -1,4 +1,4 @@
-package ePortfolio;
+package Simutrade;
 
 import java.io.File;
 import java.io.FileInputStream;
@@ -36,12 +36,12 @@ public class Portfolio {
         Scanner fileScanner = null;
 
         try {
-            File file = new File("ePortfolio/" + filename);
+            File file = new File("Simutrade/" + filename);
 
             //If file doesn't exist CREATE a new one
             if (!file.exists()) {
                 saveToFile(filename);
-                System.out.println("File not found in ePortfolio/" + filename + ". Created a new file.");
+                System.out.println("File not found in Simutrade/" + filename + ". Created a new file.");
                 return;
             }
 
@@ -87,11 +87,11 @@ public class Portfolio {
                 symbolMap.put(symbol.toLowerCase(), investment);
                 addToKeywordMap(name, investment);
             }
-            System.out.println("Portfolio info loaded from ePortfolio/" + filename);
+            System.out.println("Portfolio info loaded from Simutrade/" + filename);
 
         } 
         catch (FileNotFoundException e) {
-            System.out.println("File not found in ePortfolio/" + filename + ". Creating a new file.");
+            System.out.println("File not found in Simutrade/" + filename + ". Creating a new file.");
             saveToFile(filename);
         } 
         catch (Exception e) {
@@ -126,7 +126,7 @@ public class Portfolio {
         PrintWriter writer = null;
 
         try {
-            writer = new PrintWriter(new FileOutputStream(new File("ePortfolio/" + filename)));
+            writer = new PrintWriter(new FileOutputStream(new File("Simutrade/" + filename)));
             //write each inv to file.s
             for (Investment investment : investments) {
                 if (investment instanceof Stock) {
@@ -142,10 +142,10 @@ public class Portfolio {
                 writer.println();
             }
 
-            System.out.println("Portfolio saved to ePortfolio/" + filename);
+            System.out.println("Portfolio saved to Simutrade/" + filename);
         } 
         catch (FileNotFoundException e) { //filenotfoundexception
-            throw new Exception("ERROR!! CAN'T SAVE FILE - ePortfolio/" + filename);
+            throw new Exception("Error cannot save file to Simutrade package/" + filename);
         } 
         finally {
             if (writer != null) {

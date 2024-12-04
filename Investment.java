@@ -1,4 +1,4 @@
-package ePortfolio;
+package Simutrade;
 
 import java.util.ArrayList;
 import java.util.List;
