@@ -1,47 +1,53 @@
-package Simutrade;
+package ePortfolio;
 
 /**
  * Class for representing stocks, extending the Investment class.
  */
+//Class for representing stocks, extending the Investment class
 public class Stock extends Investment {
+    private static final double COMMISSION = 9.99; //commission for stocks is 9.99
 
     /**
-     *CONSTRUCTORS to initialize a stock.
-     *@param symbol   symbol
-     *@param name  name
-     *@param quantity quant
-     *@param price  price/share
+     * Constructor to initialize a stock.
+     * @param symbol the stock's symbol
+     * @param name the stock's name
+     * @param quantity the number of shares
+     * @param price the price per share
+     * @throws Exception if any parameter is invalid
      */
-    public Stock(String symbol, String name, int quantity, double price) {
+    //CONSTRUCTORS to initialize a stock.
+    public Stock(String symbol, String name, int quantity, double price) throws Exception {
         super(symbol, name, quantity, price);
+        this.bookValue = calculateBookValue(quantity, price);
     }
 
     /**
-     *Calculates the book value of the stock, including a commission fee. OVERRIDES
-     *@param quantity The quantity of shares
-     *@param price    The price per share
-     *@return The calculated book value including commission
+     * Copy constructor to create a duplicate Stock object.
+     * @param other the stock to copy
      */
+    //Copy constructor to create a duplicate Stock object
+    public Stock(Stock other) {
+        super(other);
+    }
+
+     /**
+     * Calculates the book value of the stock, including a commission fee.
+     * @param quantity the number of shares
+     * @param price the price per share
+     * @return the book value including commission
+     */
+    //Calculates the book value of the stock, including a commission fee. OVERRIDES
     protected double calculateBookValue(int quantity, double price) {
-        double total;
-        total = quantity *price + 9.99;
-        return total; //commission for stocks 9.99
+        return (quantity * price) + COMMISSION; //9.99
     }
 
     /**
-     *calc gain oVERRIDES
-     *@return The calculated gain based on current price and book value
+     * Calculates the gain for the stock.
+     * @return the gain calculated as (quantity * price) - bookValue
      */
+    //calc gain OVERRIDES
     public double calculateGain() {
-        double total;
-        total = quantity * price - bookValue;
-        return total;
-    }
-    /**
-     *Returns a string representation of the stock, including its symbol, name, quantity, and price. OVERRIDES
-     *@return A string describing the stock
-     */
-    public String toString() {
-        return "Stock: " + super.toString();
+        return (quantity * price) - bookValue; 
     }
 }
+

@@ -1,7 +1,0 @@
-type = "stock"
-symbol = "aapl"
-name = "apple"
-quantity = "1000"
-price = "300.0"
-bookValue = "200009.99"
-

@@ -1,94 +1,137 @@
-package Simutrade;
+package ePortfolio;
 
 import java.io.File;
 import java.io.FileInputStream;
 import java.io.FileOutputStream;
 import java.io.PrintWriter;
-import java.io.FileNotFoundException;
+import java.io.FileNotFoundException;  //for files.
 import java.util.ArrayList;
 import java.util.HashMap;
-import java.util.Scanner;
-import java.util.StringTokenizer;
+import java.util.Scanner; //still need it for files.
+import java.util.StringTokenizer; //strtok
 
+/**
+ *portfolio of investments including stocks and mutual funds.
+ * buying, selling, updating prices, calculating gains, and searching investments.
+ */
 public class Portfolio {
-    private ArrayList<Investment> investments = new ArrayList<>(); //ARRAYLIST OF ALL INVESTMENT
-    private HashMap<String, Investment> symbolMap = new HashMap<>(); //MAPS FOR LOOKUP
-    private HashMap<String, ArrayList<Integer>> keywordMap = new HashMap<>(); //KEYWORDMAP
+    //array list to store all investments
+    private ArrayList<Investment> investments = new ArrayList<>();
+
+    //Map. investment symbols w/ objects
+    private HashMap<String, Investment> symbolMap = new HashMap<>();
+
+    //map keywords with inv list with  those keywords in na,es
+    private HashMap<String, ArrayList<Investment>> keywordMap = new HashMap<>();
 
     /**
-     * Load investments from a file within the ePortfolio package. If the file does not exist, it creates a new file.
-     * @param filename  filename to load from.
+     * Loads portfolio data from a file. If the file doesn't exist, it creates a new one.
+     * 
+     * @param filename the file name to load data from
+     * @throws Exception if there is a problem reading the file
      */
-    public void loadFromFile(String filename) {
+    //load portfolio
+    public void loadFromFile(String filename) throws Exception {
+        FileInputStream fileInput = null;
         Scanner fileScanner = null;
 
         try {
-            fileScanner = new Scanner(new FileInputStream(new File("ePortfolio/" + filename)));
+            File file = new File("ePortfolio/" + filename);
 
-            while (fileScanner.hasNextLine()) {
-                //hash builda
-                String whatsTheTypeLine = fileScanner.nextLine().trim();
-                if (whatsTheTypeLine.isEmpty()) {
-                    continue;
+            //If file doesn't exist CREATE a new one
+            if (!file.exists()) {
+                saveToFile(filename);
+                System.out.println("File not found in ePortfolio/" + filename + ". Created a new file.");
+                return;
+            }
+
+            fileInput = new FileInputStream(file);
+            fileScanner = new Scanner(fileInput);
+            //LOADING 
+            //pasrse file contents line by line
+            while (fileScanner.hasNextLine()) {//iterator
+                String typeLine = fileScanner.nextLine().trim();
+                if (typeLine.isEmpty()) {
+                    continue; //skip empty lines
                 }
+                //extract form lines
                 String symbolLine = fileScanner.nextLine().trim();
                 String nameLine = fileScanner.nextLine().trim();
                 String quantityLine = fileScanner.nextLine().trim();
                 String priceLine = fileScanner.nextLine().trim();
                 String bookValueLine = fileScanner.nextLine().trim();
-                
-                //get values 
-                String assetType = whatsTheTypeLine.split("=", 2)[1].trim().replace("\"", "");
-                String symbol = symbolLine.split("=", 2)[1].trim().replace("\"", "");
-                String name = nameLine.split("=", 2)[1].trim().replace("\"", "");
-                int quantity = Integer.parseInt(quantityLine.split("=", 2)[1].trim().replace("\"", ""));
-                double price = Double.parseDouble(priceLine.split("=", 2)[1].trim().replace("\"", ""));
-                double bookValue = Double.parseDouble(bookValueLine.split("=", 2)[1].trim().replace("\"", ""));
 
+                //parse investment details
+                String assetType = extractValue(typeLine);
+                String symbol = extractValue(symbolLine);
+                String name = extractValue(nameLine);
+                int quantity = Integer.parseInt(extractValue(quantityLine));
+                double price = Double.parseDouble(extractValue(priceLine));
+                double bookValue = Double.parseDouble(extractValue(bookValueLine));
+
+                //inv obj based on type
                 Investment investment;
                 if (assetType.equalsIgnoreCase("stock")) {
                     investment = new Stock(symbol, name, quantity, price);
-                } 
-                else if (assetType.equalsIgnoreCase("mutualfund")) {
+                }
+                 else if (assetType.equalsIgnoreCase("mutualfund")) {
                     investment = new MutualFund(symbol, name, quantity, price);
                 } 
                 else {
-                    continue;
+                    continue; //skip invalid
                 }
-                
-                investment.setBookValue(bookValue); //set book val
-                investments.add(investment); //add
-                symbolMap.put(symbol, investment); //put on map
-                addToKeywordMap(name, investments.size() - 1); 
+
+                //book value set and update portfolio 
+                investment.setBookValue(bookValue);
+                investments.add(investment);
+                symbolMap.put(symbol.toLowerCase(), investment);
+                addToKeywordMap(name, investment);
             }
             System.out.println("Portfolio info loaded from ePortfolio/" + filename);
 
         } 
-        //file not found exception then we create a new file
         catch (FileNotFoundException e) {
             System.out.println("File not found in ePortfolio/" + filename + ". Creating a new file.");
-            saveToFile(filename);  //createsa new file if not found..
-        }
-        if (fileScanner != null) {
-            fileScanner.close();
+            saveToFile(filename);
+        } 
+        catch (Exception e) {
+            throw new Exception("Error loading portfolio: " + e.getMessage());
+        } 
+        finally {
+            if (fileScanner != null) {
+                fileScanner.close();
+            }
+            if (fileInput != null) {
+                fileInput.close();
+            }
         }
     }
-
+    //helperf
     /**
-     * Save the CURRENT portfolio to a file within eportfolio package
-     * @param filename The filename to save to.
+     * Gets the value after the equals sign in a string.
+     * @param line the input line
+     * @return the value part of the line
      */
-    public void saveToFile(String filename) {
+    private String extractValue(String line) {
+        return line.split("=", 2)[1].trim().replace("\"", "");
+    }
+
+    //ssave portfolio data to txt file
+    /**
+     * Saves portfolio data to a file.
+     * @param filename the file name to save data to
+     * @throws Exception if there is a problem saving the file
+     */
+    public void saveToFile(String filename) throws Exception {
         PrintWriter writer = null;
-        //try to save to file
+
         try {
             writer = new PrintWriter(new FileOutputStream(new File("ePortfolio/" + filename)));
-
+            //write each inv to file.s
             for (Investment investment : investments) {
                 if (investment instanceof Stock) {
                     writer.println("type = \"stock\"");
-                } 
-                else if (investment instanceof MutualFund) {
+                } else if (investment instanceof MutualFund) {
                     writer.println("type = \"mutualfund\"");
                 }
                 writer.println("symbol = \"" + investment.getSymbol() + "\"");
@@ -98,55 +141,52 @@ public class Portfolio {
                 writer.println("bookValue = \"" + investment.getBookValue() + "\"");
                 writer.println();
             }
+
             System.out.println("Portfolio saved to ePortfolio/" + filename);
-
-        }
-        //if we cant save the file then exit the system and print an error message something is wrong
-        catch (FileNotFoundException e) {
-            System.out.println("ERROR!! CANT SAVE FILE - ePortfolio/" + filename);
-            System.exit(0);
-        }
-        if (writer != null) {
-            writer.close();
-        }
-    }
-
-    /**
-     * add keywords from the name to the keyword map.
-     * @param name The name of the investment to index.
-     * @param position The position of the investment in the investments list.
-     */
-    private void addToKeywordMap(String name, int position) {
-        StringTokenizer tokenizer = new StringTokenizer(name.toLowerCase());
-        while (tokenizer.hasMoreTokens()) {
-            String keyword = tokenizer.nextToken();
-            ArrayList<Integer> positions = keywordMap.get(keyword);
-            if (positions == null) {
-                positions = new ArrayList<>();
-                keywordMap.put(keyword, positions);
-            }
-            if (!positions.contains(position)) {
-                positions.add(position);
+        } 
+        catch (FileNotFoundException e) { //filenotfoundexception
+            throw new Exception("ERROR!! CAN'T SAVE FILE - ePortfolio/" + filename);
+        } 
+        finally {
+            if (writer != null) {
+                writer.close();
             }
         }
     }
 
-    /**
-     * Removes keywords from keyword map for a name.
-     * @param name The name of the investment to remove from the index.
+    //addddddd investment to  keyword map 
+      /**
+     * Adds an investment's keywords to the keyword map.
+     * @param name the name of the investment
+     * @param investment the investment to add
      */
-    private void removeFromKeywordMap(String name) {
-        int position = investments.indexOf(name);
-        if (position == -1) {
-            return;
+    private void addToKeywordMap(String name, Investment investment) {
+        StringTokenizer tokenizer = new StringTokenizer(name.toLowerCase());
+
+        while (tokenizer.hasMoreTokens()) {
+            String keyword = tokenizer.nextToken();
+            ArrayList<Investment> investmentsList = keywordMap.computeIfAbsent(keyword, k -> new ArrayList<>());
+            if (!investmentsList.contains(investment)) {
+                investmentsList.add(investment);
+            }
         }
+    }
+
+    //investment removal from  keyword map
+     //buy an investment or update an existing one
+     /**
+     * Removes an investment's keywords from the keyword map.
+     * @param name the name of the investment
+     * @param investment the investment to remove
+     */
+    private void removeFromKeywordMap(String name, Investment investment) {
         StringTokenizer tokenizer = new StringTokenizer(name.toLowerCase());
         while (tokenizer.hasMoreTokens()) {
             String keyword = tokenizer.nextToken();
-            ArrayList<Integer> positions = keywordMap.get(keyword);
-            if (positions != null) {
-                positions.remove((Integer) position);
-                if (positions.isEmpty()) {
+            ArrayList<Investment> investmentsList = keywordMap.get(keyword);
+            if (investmentsList != null) {
+                investmentsList.remove(investment);
+                if (investmentsList.isEmpty()) {
                     keywordMap.remove(keyword);
                 }
             }
@@ -154,206 +194,241 @@ public class Portfolio {
     }
 
     /**
-     * BUY METHOD: buy stocks or mutual funds.
-     * @param keyboard Scanner for user input
+     * Buys a new investment or adds to an existing one.
+     * 
+     * @param type the type of investment ("Stock" or "Mutual Fund")
+     * @param symbol the unique symbol of the investment
+     * @param name the name of the investment
+     * @param quantity the amount to buy
+     * @param price the price per unit
+     * @return a message about the result of the buy action
+     * @throws Exception if inputs are invalid or there are conflicts
      */
-    public void buy(Scanner keyboard) {
-        System.out.println("Enter the asset type (stock/s or mutualfund/m): ");
-        String assetTypeInput = keyboard.nextLine().trim().toLowerCase();
-
-        //defensive programming strategy, make sure they add stock/s or mutual fund/m:::
-        String assetType;
-        switch (assetTypeInput) {
-            case "stock":
-            case "s":
-                assetType = "stock";
-                break;
-            case "mutualfund":
-            case "m":
-                assetType = "mutualfund";
-                break;
-            default:
-                System.out.println("Unknown operation entered. Please enter either 'stock' or 'mutualfund'.");
-                return;
+    public String buy(String type, String symbol, String name, int quantity, double price) throws Exception {
+        //validate inputs
+        if (symbol == null || symbol.isEmpty()) {
+            throw new Exception("Symbol cannot be null or empty.");
+        }
+        if (name == null || name.isEmpty()) {
+            throw new Exception("Name cannot be null or empty.");
+        }
+        if (quantity <= 0) {
+            throw new Exception("Quantity must be positive.");
+        }
+        if (price <= 0) {
+            throw new Exception("Price must be positive.");
         }
 
-        System.out.println("Enter symbol: ");
-        String symbol = keyboard.nextLine().trim();
-        boolean found = false; //checks if stuff found
+        // Check if the investment already exists
+        Investment existingInvestment = symbolMap.get(symbol.toLowerCase());
 
-        if (symbolMap.containsKey(symbol)) {
-            Investment investment = symbolMap.get(symbol);
-            found = true;
-
-            System.out.print("Enter quantity to buy: ");
-            int additionalQuantity = keyboard.nextInt();
-            System.out.print("Enter price: ");
-            double newPrice = keyboard.nextDouble();
-
-            // Defensive programming: Ensure valid quantity and price
-            if (additionalQuantity < 0 || newPrice < 0) {
-                System.out.println("Quantity and price must be non-negative.");
-                return;
+        if (existingInvestment != null) {
+            //validate type and name
+            if ((type.equalsIgnoreCase("Stock") && !(existingInvestment instanceof Stock)) ||(type.equalsIgnoreCase("Mutual Fund") && !(existingInvestment instanceof MutualFund))) {
+                throw new Exception("Error: Symbol " + symbol + " is already used for a different investment type.");
+            }
+            if (!existingInvestment.getName().equalsIgnoreCase(name)) {
+                throw new Exception("Error: Investment with symbol " + symbol + " already exists with a different name.");
             }
 
-            keyboard.nextLine(); //Eat newline
+            // Update existing investment
+            existingInvestment.setQuantity(existingInvestment.getQuantity() + quantity);
+            existingInvestment.setPrice(price);
+            existingInvestment.setBookValue(existingInvestment.getBookValue() + 
+                existingInvestment.calculateBookValue(quantity, price));
 
-            //update ALL quantity, price, and book value
-            investment.setQuantity(investment.getQuantity() + additionalQuantity);
-            investment.setPrice(newPrice);
-            investment.setBookValue(investment.getBookValue() + newPrice * additionalQuantity);
+            return "Updated investment: " + existingInvestment + "\n";
+        }
 
-            System.out.println("Updated investment: " + investment);
-
+        //create new investment.f
+        Investment newInvestment;
+        if (type.equalsIgnoreCase("Stock")) {
+            newInvestment = new Stock(symbol, name, quantity, price);
         } 
+        else if (type.equalsIgnoreCase("Mutual Fund")) {
+            newInvestment = new MutualFund(symbol, name, quantity, price);
+        }
         else {
-            //if the investment not found make a new one
-            System.out.print("Enter name: ");
-            String name = keyboard.nextLine().trim();
-            System.out.print("Enter quantity: ");
-            int quantity = keyboard.nextInt();
-            System.out.print("Enter price: ");
-            double price = keyboard.nextDouble();
-
-            // Defensive programming: Ensure valid quantity and price
-            if (quantity < 0 || price < 0) {
-                System.out.println("Quantity and price must be non-negative.");
-                return;
-            }
-
-            keyboard.nextLine(); //EAT newline
-
-            Investment newInvestment;
-            //if stock type then make a new obj of type STOCK
-            if (assetType.equals("stock")) {
-                newInvestment = new Stock(symbol, name, quantity, price);
-            } 
-            //same thing but for mut funds
-            else {
-                newInvestment = new MutualFund(symbol, name, quantity, price);
-            }
-
-            investments.add(newInvestment);
-            symbolMap.put(symbol, newInvestment);
-            addToKeywordMap(name, investments.size() - 1);
-
-            System.out.println("Added new investment: " + newInvestment);
+            throw new Exception("Invalid investment type.");
         }
+
+        //add the neew investment to the portfolio
+        investments.add(newInvestment);
+        symbolMap.put(symbol.toLowerCase(), newInvestment);
+        addToKeywordMap(name, newInvestment);
+
+        return "Added new investment: " + newInvestment + "\n";
     }
 
+    //sell an investment or lower its quant
     /**
-     * SELL METHOD: sell stocks or mutual funds.
-     * @param keyboard Scanner for user input
+     * Sells some or all of an investment.
+     * 
+     * @param symbol the symbol of the investment to sell
+     * @param sellQuantity the amount to sell
+     * @param sellPrice the price per unit
+     * @return a message about the result of the sell action
+     * @throws Exception if inputs are invalid or the sale cannot be completed
      */
-    public void sell(Scanner keyboard) {
-        System.out.println("Enter the symbol of the investment to sell: ");
-        String symbol = keyboard.nextLine().trim();
-        Investment investment = symbolMap.get(symbol);
-
-        if (investment != null) {
-            System.out.print("Enter quantity to sell: ");
-            int sellQuantity = keyboard.nextInt();
-            System.out.print("Enter selling price: ");
-            double sellPrice = keyboard.nextDouble();
-            keyboard.nextLine(); //EAT newline
-
-            //check if sell quantity is valid
-            if (sellQuantity > investment.getQuantity()) {
-                System.out.println("Error: Selling quantity exceeds available quantity.");
-                return;
-            }
-
-            //calc payment and apply fees
-            double payment = sellPrice * sellQuantity;
-            if (investment instanceof Stock) {
-                payment -= 9.99; //stock commission from as 1
-            } 
-            else if (investment instanceof MutualFund) {
-                payment -= 45.00; //redemption fee from as. 1 for  MutualFund
-            }
-
-            System.out.println("Payment received: $" + payment);
-
-            int newQuantity = investment.getQuantity() - sellQuantity;
-            if (newQuantity > 0) {
-                double newBookValue = investment.getBookValue() * ((double) newQuantity / investment.getQuantity());
-                investment.setQuantity(newQuantity);
-                investment.setBookValue(newBookValue);
-                System.out.println("Updated investment: " + investment);
-            } 
-            else {
-                investments.remove(investment);
-                symbolMap.remove(symbol);
-                removeFromKeywordMap(investment.getName());
-                System.out.println("Investment sold completely and removed from portfolio.");
-            }
-        } else {
-            System.out.println("Investment with symbol " + symbol + " not found.");
+    public String sell(String symbol, int sellQuantity, double sellPrice) throws Exception {
+        // Validate input parameters
+        if (symbol == null || symbol.isEmpty()) {
+            throw new Exception("Symbol cannot be null or empty.");
         }
+        if (sellQuantity <= 0) {
+            throw new Exception("Sell quantity must be positive.");
+        }
+        if (sellPrice <= 0) {
+            throw new Exception("Sell price must be positive.");
+        }
+
+        //find inv by symbol
+        Investment investment = symbolMap.get(symbol.toLowerCase());
+
+        if (investment == null) {
+            throw new Exception("Investment with symbol " + symbol + " not found.");
+        }
+
+        //make sure right quantity for selling.
+        if (sellQuantity > investment.getQuantity()) {
+            throw new Exception("Error: Selling quantity exceeds available quantity.");
+        }
+
+        // calc payment
+        double payment = sellPrice * sellQuantity; //calc
+        if (investment instanceof Stock) {
+            payment -= 9.99; //- the9.99 fee COMMISION
+        } else if (investment instanceof MutualFund) {
+            payment -= 45.00; //mutual fund REDEMPTION FEE
+        }
+        if (payment < 0) {
+            throw new Exception("Error: Fees exceed payment. Transaction aborted.");
+        }
+
+        //update or remov inv
+        int newQuantity = investment.getQuantity() - sellQuantity;
+        if (newQuantity > 0) {
+            double newBookValue = investment.getBookValue() * ((double) newQuantity / investment.getQuantity());
+            investment.setQuantity(newQuantity);
+            investment.setBookValue(newBookValue);
+            return "Payment received: $" + String.format("%.2f", payment) + "\nUpdated investment: " + investment + "\n";
+        }
+        //for inv removal
+        investments.remove(investment);
+        symbolMap.remove(symbol.toLowerCase());
+        removeFromKeywordMap(investment.getName(), investment);
+
+        return "Payment received: $" + String.format("%.2f", payment) + "\nInvestment sold completely and removed from portfolio.\n";
     }
 
+    //update price of investment
     /**
-     * Updates the prices of all investments based on user input.
-     * @param keyboard Scanner for user input
+     * Updates the price of an investment by its position in the list.
+     * @param index the position of the investment
+     * @param newPrice the new price to set
+     * @return a message about the result of the update
+     * @throws Exception if the index is invalid or the price is not valid
      */
-    public void update(Scanner keyboard) {
-        for (Investment investment : investments) {
-            System.out.print("Enter new price for " + investment.getSymbol() + ": ");
-            double newPrice = keyboard.nextDouble();
-            investment.setPrice(newPrice);
+    public String updatePrice(int index, double newPrice) throws Exception {
+        if (index < 0 || index >= investments.size()) {
+            throw new Exception("Invalid investment index.");
         }
-        keyboard.nextLine(); //Eat newline
-        System.out.println("All prices updated!!!");
-    }
+        if (newPrice <= 0) {
+            throw new Exception("Price must be positive.");
+        }
 
+        Investment investment = investments.get(index);
+        investment.setPrice(newPrice);
+
+        return "Updated investment: " + investment + "\n";
+    }
     /**
-     * methiod to calc total gain of the portfolio. calc gain for both stocks and mutual funds.
+     * Calculates the total gain for the portfolio and gains for each investment.
+     * 
+     * @return a string showing the gains for each investment and the total gain
      */
-    public void getGain() {
+    //calc total gain
+    public String getGain() {
         double totalGain = 0;
+        String result = "";
+
         for (Investment investment : investments) {
-            totalGain += investment.calculateGain();
+            double gain = investment.calculateGain();
+            result += investment.getSymbol() + ": $" + String.format("%.2f", gain) + "\n";
+            totalGain += gain;
         }
-        System.out.printf("Total gain of the portfolio: $%.2f\n", totalGain);
+
+        result += "Total gain: $" + String.format("%.2f", totalGain) + "\n";
+        return result;
     }
 
-    /**
-     * Method for searching investments (BIG ONE). Searches by symbol (case insensitive), keywords in name, and price range.
-     * @param keyboard Scanner for user input
+     /**
+     * Searches for investments using symbol, keywords, or price range.
+     * 
+     * @param symbol the symbol to search for
+     * @param keywords the keywords to search in names
+     * @param lowPrice the minimum price or -1 for no limit
+     * @param highPrice the maximum price or -1 for no limit
+     * @return a string showing the search results
      */
-    public void search(Scanner keyboard) {
-        System.out.print("Enter symbol (case-insensitive, leave empty all): ");
-        String symbol = keyboard.nextLine().trim();
-        System.out.print("Enter keyword(s) in name (case-insensitive, leave empty for all): ");
-        String keywords = keyboard.nextLine().trim();
-
-        ArrayList<Integer> matchedPositions = new ArrayList<>();
-        if (!keywords.isEmpty()) {
+    //search investments different search methods.
+    public String search(String symbol, String keywords, double lowPrice, double highPrice) {
+        ArrayList<Investment> matchedInvestments = new ArrayList<>();
+        //srch symbol
+        if (!symbol.isEmpty()) {
+            Investment investment = symbolMap.get(symbol.toLowerCase());
+            if (investment != null) {
+                matchedInvestments.add(investment);
+            }
+        } 
+        else if (!keywords.isEmpty()) {
+            //keywords srch.
             String[] keywordArray = keywords.toLowerCase().split("\\s+");
-
+            HashMap<Investment, Integer> investmentCount = new HashMap<>();
             for (String keyword : keywordArray) {
-                ArrayList<Integer> positions = keywordMap.get(keyword);
-
-                if (positions != null) {
-                    for (int pos : positions) {
-                        if (!matchedPositions.contains(pos)) {
-                            matchedPositions.add(pos);
-                        }
+                ArrayList<Investment> investmentsList = keywordMap.get(keyword);
+                if (investmentsList != null) {
+                    for (Investment investment : investmentsList) {
+                        investmentCount.put(investment, investmentCount.getOrDefault(investment, 0) + 1);
                     }
+                }
+            }
+            for (Investment investment : investmentCount.keySet()) {
+                if (investmentCount.get(investment) == keywordArray.length) {
+                    matchedInvestments.add(investment);
                 }
             }
         } 
         else {
-            for (int i = 0; i < investments.size(); i++) {
-                matchedPositions.add(i);
-            }
+            //return all investments if none filters.
+            matchedInvestments.addAll(investments);
         }
 
-        for (int position : matchedPositions) {
-            Investment investment = investments.get(position);
-            if (symbol.isEmpty() || investment.getSymbol().equalsIgnoreCase(symbol)) {
-                System.out.println(investment);
+        //filter by pricde range.
+        ArrayList<Investment> finalMatchedInvestments = new ArrayList<>();
+        for (Investment investment : matchedInvestments) {
+            boolean withinLow = (lowPrice == -1) || (investment.getPrice() >= lowPrice);
+            boolean withinHigh = (highPrice == -1) || (investment.getPrice() <= highPrice);
+            if (withinLow && withinHigh) {
+                finalMatchedInvestments.add(investment);
             }
         }
+        //prep search results
+        if (finalMatchedInvestments.isEmpty()) {
+            return "No investments match your search criteria.\n";
+        }
+        String results = "";
+        for (Investment inv : finalMatchedInvestments) {
+            results += inv + "\n";
+        }
+        return results;
+    }
+    //get all investments. getterrrr
+    /**
+     * Gets all investments in the portfolio.
+     * @return a list of all investments
+     */
+    public ArrayList<Investment> getInvestments() {
+        return new ArrayList<>(investments);
     }
 }
