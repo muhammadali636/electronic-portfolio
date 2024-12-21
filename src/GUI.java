@@ -1,5 +1,6 @@
-package Simutrade;
-import java.util.InputMismatchException;
+package ePortfolio;
+
+// Swing Components
 import javax.swing.JFrame;
 import javax.swing.JButton;
 import javax.swing.JLabel;
@@ -11,15 +12,27 @@ import javax.swing.JMenu;
 import javax.swing.JMenuBar;
 import javax.swing.JMenuItem;
 import javax.swing.JComboBox;
-import javax.swing.BoxLayout; 
-import javax.swing.ImageIcon; //didnt use but maybe later.
-import java.awt.Color; //figure out how to add more colors later.
-import java.awt.Font; //didnt use but maybe later
+import javax.swing.BoxLayout;
+import javax.swing.ImageIcon;
+import javax.swing.Box;
+
+// Layout Managers and Utilities
+import java.awt.Color;
+import java.awt.Font;
 import java.awt.BorderLayout;
-import java.awt.GridLayout;
 import java.awt.FlowLayout;
+import java.awt.GridLayout;
+import java.awt.Image;
+import java.awt.Dimension;
+import java.awt.Component;
+
+// Event Handling
 import java.awt.event.ActionListener;
 import java.awt.event.ActionEvent;
+
+// Exceptions and Dialogs
+import java.util.InputMismatchException;
+import javax.swing.JOptionPane;
 
 /**
  * The GUI class manages the graphical user interface for the ePortfolio application.
@@ -43,15 +56,14 @@ public class GUI {
     private JPanel totalGainPanel;
     private JPanel searchPanel;
 
-    //main panel cont
+    //main panel container
     private JPanel mainPanel;
     private JFrame frame;
 
-    //height width constants.
-    public static final int WIDTH = 670; //setting this const
-    public static final int HEIGHT = 350;
+    //height width constants
+    public static final int WIDTH = 650; 
+    public static final int HEIGHT = 400;
 
-    //main
     /**
      * Main method to launch the application.
      * @param args command-line arguments.
@@ -60,24 +72,26 @@ public class GUI {
         GUI gui = new GUI();
         gui.createAndShowGUI();
     }
-    //gui constructor
+
     /**
      * Constructor for the GUI class. Initializes the portfolio and loads data from a file.
      */
     public GUI() {
-        portfolio = new Portfolio(); //new prtfolio
+        portfolio = new Portfolio(); //new portfolio
 
         //TRY TO load investments from file
         try {
-            portfolio.loadFromFile("investments.txt"); //investment file from A2, reading a file. 
+            // Changed from "../lib/investments.txt" to "lib/investments.txt"
+            // so that running from the ePortfolio folder will load the old file in lib/
+            portfolio.loadFromFile("investments.txt"); 
         } 
-        catch (Exception e) { //for some reason cant use filenotfound exception, but this works. 
-             //exception handling
+        catch (Exception e) { 
+            //exception handling
             System.out.println("Error initializing portfolio: " + e.getMessage());
             System.exit(0); 
         }
     }
-    //DISPLAY
+
     /**
      * Creates and displays the main GUI interface.
      */
@@ -86,6 +100,7 @@ public class GUI {
         frame = new JFrame("ePortfolio");
         frame.setDefaultCloseOperation(JFrame.EXIT_ON_CLOSE);
         frame.setSize(WIDTH, HEIGHT);
+
         //menu bar
         JMenuBar menuBar = new JMenuBar();
         JMenu commandsMenu = new JMenu("Commands");
@@ -108,17 +123,18 @@ public class GUI {
         menuBar.add(commandsMenu);
         frame.setJMenuBar(menuBar);
 
-        //mainpanel with borderlayout
+        //main panel with borderlayout
         mainPanel = new JPanel(new BorderLayout());
 
-        //the indiv panels (make them)
+        //initialize panels
         welcomePanel = createWelcomePanel();
         buyPanel = createBuyPanel();
         sellPanel = createSellPanel();
         updatePanel = createUpdatePanel();
         totalGainPanel = createTotalGainPanel();
         searchPanel = createSearchPanel();
-        //welcome panel
+
+        //default to welcome panel
         mainPanel.add(welcomePanel, BorderLayout.CENTER);
 
         //action listeners for menu items
@@ -130,50 +146,195 @@ public class GUI {
         searchMenuItem.addActionListener(new SearchListener());
         quitMenuItem.addActionListener(new QuitListener());
 
-        //add mainpanel to frame
+        //add mainPanel to frame
         frame.add(mainPanel);
-        frame.setVisible(true); //setvisible
+        frame.setVisible(true); 
     }
-/**
+
+    /**
      * Swaps the current panel displayed in the main panel with a new panel.
      * @param newPanel the new panel to display.
      */
-    private void swapPanel(JPanel newPanel) { //change.
+    private void swapPanel(JPanel newPanel) {
         mainPanel.removeAll();
         mainPanel.add(newPanel, BorderLayout.CENTER);
-        mainPanel.validate(); //validate panel.
+        mainPanel.validate();
         mainPanel.repaint();
     }
 
-    //HOME PANEL (WELCOME PANEL WITH WELCOME MESSAGES)
     /**
-     * Creates the welcome panel with welcome messages and instructions.
+     * Creates the welcome panel with an H1 title at the top,
+     * then left-aligned welcome text,
+     * then a "Current Balance" display,
+     * followed by a centered image (shifted slightly higher),
+     * and finally the "Set new starting balance" field/button plus "Reset Game" at the bottom.
      * @return the welcome panel.
      */
-    private static JPanel createWelcomePanel() {
-        //make main panel with borderlayout..
+    private JPanel createWelcomePanel() {
+        // Main panel with BorderLayout
         JPanel panel = new JPanel(new BorderLayout());
-        panel.setBackground(Color.CYAN); //background color blue :)
-        //create+add title label..
-        JLabel titleLabel = new JLabel("Welcome to ePortfolio");
-        titleLabel.setHorizontalAlignment(JLabel.CENTER); // Center align title
-        titleLabel.setFont(new Font("Arial", Font.BOLD, 18)); // Set font for the title
-        panel.add(titleLabel, BorderLayout.NORTH);
-        //subpanel with descriptions using flowlayout.
-        JPanel descriptionPanel = new JPanel(new FlowLayout(FlowLayout.LEFT));
-        descriptionPanel.setBackground(Color.CYAN); // Match the main panel's background
-        //descript labels.
-        JLabel descriptionLabel1 = new JLabel("Choose a command from the \"Commands\" menu to buy or sell an investment,");
-        JLabel descriptionLabel2 = new JLabel("update prices for all investments, get gain for the portfolio,");
-        JLabel descriptionLabel3 = new JLabel("search for relevant investments, or quit the program.");
-        descriptionPanel.add(descriptionLabel1);
-        descriptionPanel.add(descriptionLabel2);
-        descriptionPanel.add(descriptionLabel3);
-        panel.add(descriptionPanel, BorderLayout.CENTER);
+        panel.setBackground(Color.CYAN);
+
+        // 1) H1 Title at the very top
+        JLabel h1Title = new JLabel("Welcome to ePortfolio", JLabel.CENTER);
+        h1Title.setFont(new Font("Arial", Font.BOLD, 24));  // Big font for H1
+        panel.add(h1Title, BorderLayout.NORTH);
+
+        // 2) Center panel with BoxLayout.Y_AXIS for vertical stacking
+        JPanel centerPanel = new JPanel();
+        centerPanel.setBackground(Color.CYAN);
+        centerPanel.setLayout(new BoxLayout(centerPanel, BoxLayout.Y_AXIS));
+
+        // 2.1) Welcome Instructions - Left-aligned
+        JPanel instructionsPanel = new JPanel();
+        instructionsPanel.setBackground(Color.CYAN);
+        instructionsPanel.setLayout(new BoxLayout(instructionsPanel, BoxLayout.Y_AXIS));
+        instructionsPanel.setAlignmentX(Component.LEFT_ALIGNMENT); // Align to left in BoxLayout
+
+        JLabel instruction1 = new JLabel("Choose a command from the \"Commands\" menu to buy or sell an investment,");
+        JLabel instruction2 = new JLabel("update prices for all investments, get gain for the portfolio,");
+        JLabel instruction3 = new JLabel("search for relevant investments, or quit the program.");
+
+        // Configure labels for left alignment
+        for (JLabel instruction : new JLabel[]{instruction1, instruction2, instruction3}) {
+            instruction.setAlignmentX(Component.LEFT_ALIGNMENT);     // Align within BoxLayout
+            instruction.setHorizontalAlignment(JLabel.LEFT);          // Align text within JLabel
+            instruction.setMaximumSize(new Dimension(Integer.MAX_VALUE, instruction.getPreferredSize().height)); // Allow horizontal expansion
+            instructionsPanel.add(instruction);
+        }
+
+        centerPanel.add(instructionsPanel);
+
+        // Add vertical spacing between instructions and current balance
+        centerPanel.add(Box.createRigidArea(new Dimension(0, 10)));
+
+        // 2.2) Current Balance - Left-aligned
+        JPanel currentBalancePanel = new JPanel(new FlowLayout(FlowLayout.LEFT, 5, 0)); // FlowLayout with left alignment and small horizontal gap
+        currentBalancePanel.setBackground(Color.CYAN);
+        JLabel currentBalLabel = new JLabel("Current Balance:");
+        JTextField currentBalField = new JTextField(10);
+        currentBalField.setEditable(false);
+        // Using startingBalance as a placeholder for "current" balance
+        currentBalField.setText(String.format("%.2f", portfolio.getStartingBalance()));
+        currentBalancePanel.add(currentBalLabel);
+        currentBalancePanel.add(currentBalField);
+
+        centerPanel.add(currentBalancePanel);
+
+        // Add vertical spacing between current balance and image
+        centerPanel.add(Box.createRigidArea(new Dimension(0, 10)));
+
+        // 2.3) Image - Centered and shifted slightly higher
+        JPanel imagePanel = new JPanel(new FlowLayout(FlowLayout.CENTER, 0, 0)); // FlowLayout with center alignment and no vertical gap
+        imagePanel.setBackground(Color.CYAN);
+        JLabel bullishLabel = new JLabel();
+        try {
+            // Load the image from the resources folder
+            ImageIcon bullishIcon = new ImageIcon("resources/bullish.png"); 
+
+            // Check if the image was loaded successfully
+            if (bullishIcon.getIconWidth() == -1) {
+                throw new Exception("Image not found or unable to load.");
+            }
+
+            // Optionally scale the image to fit the panel
+            Image image = bullishIcon.getImage();
+            Image scaledImage = image.getScaledInstance(150, 150, Image.SCALE_SMOOTH); // Adjust size as needed
+            bullishIcon = new ImageIcon(scaledImage);
+            bullishLabel.setIcon(bullishIcon);
+        } 
+        catch (Exception ex) {
+            System.out.println("Unable to load the image: " + ex.getMessage());
+        }
+
+        imagePanel.add(bullishLabel);
+        centerPanel.add(imagePanel);
+
+        // Optional: Shift the image slightly higher by reducing or removing additional spacing below
+        // If needed, add negative rigid area (not recommended) or adjust the layout further
+        // For now, ensure minimal spacing below the image
+
+        panel.add(centerPanel, BorderLayout.CENTER);
+
+        // 3) Bottom panel for setting starting balance and resetting game
+        JPanel bottomPanel = new JPanel(new FlowLayout(FlowLayout.LEFT, 5, 5)); // FlowLayout with left alignment and small gaps
+        bottomPanel.setBackground(Color.CYAN);
+
+        JLabel balanceLabel = new JLabel("Set new starting balance:");
+        JTextField balanceField = new JTextField(10);
+        JButton setBalanceButton = new JButton("Set");
+        JButton resetGameButton = new JButton("Reset Game");
+
+        // Add components with spacing
+        bottomPanel.add(balanceLabel);
+        bottomPanel.add(balanceField);
+        bottomPanel.add(setBalanceButton);
+        bottomPanel.add(Box.createRigidArea(new Dimension(10, 0))); // Space before reset button
+        bottomPanel.add(resetGameButton);
+
+        panel.add(bottomPanel, BorderLayout.SOUTH);
+
+        // ACTION LISTENERS FOR SET BALANCE AND RESET GAME
+        setBalanceButton.addActionListener(new ActionListener() {
+            @Override
+            public void actionPerformed(ActionEvent e) {
+                String text = balanceField.getText().trim();
+                try {
+                    double newBalance = Double.parseDouble(text);
+                    if (newBalance < 0 || newBalance > 1_000_000) {
+                        throw new NumberFormatException("Out of range");
+                    }
+                    portfolio.setStartingBalance(newBalance);
+                    currentBalField.setText(String.format("%.2f", newBalance));
+
+                    // Immediately save the updated balance to file
+                    try {
+                        portfolio.saveToFile("investments.txt");
+                    } catch (Exception ex) {
+                        System.out.println("Error saving updated balance: " + ex.getMessage());
+                    }
+
+                    JOptionPane.showMessageDialog(panel, 
+                            "Starting balance set to: " + newBalance,
+                            "Success",
+                            JOptionPane.INFORMATION_MESSAGE);
+                } catch (NumberFormatException ex) {
+                    JOptionPane.showMessageDialog(panel,
+                            "Please enter a valid number between 0 and 1,000,000.",
+                            "Error",
+                            JOptionPane.ERROR_MESSAGE);
+                }
+            }
+        });
+
+        resetGameButton.addActionListener(new ActionListener() {
+            @Override
+            public void actionPerformed(ActionEvent e) {
+                int confirmation = JOptionPane.showConfirmDialog(
+                        panel,
+                        "Are you sure you want to reset everything?",
+                        "Confirm Reset",
+                        JOptionPane.YES_NO_OPTION
+                );
+                if (confirmation == JOptionPane.YES_OPTION) {
+                    portfolio.setStartingBalance(0);
+                    portfolio.clearAllInvestments();
+                    try {
+                        portfolio.saveToFile("investments.txt");
+                        currentBalField.setText("0.00");
+                        JOptionPane.showMessageDialog(panel, "Game reset successfully!",
+                                "Success", JOptionPane.INFORMATION_MESSAGE);
+                    } catch (Exception ex) {
+                        JOptionPane.showMessageDialog(panel, "Error resetting game: " + ex.getMessage(),
+                                "Error", JOptionPane.ERROR_MESSAGE);
+                    }
+                }
+            }
+        });
+
         return panel;
     }
-    
-    //CREATE BUY PANEL.
+
     /**
      * Creates the buy panel for buying investments.
      * @return the buy panel.
@@ -182,12 +343,13 @@ public class GUI {
         JPanel panel = new JPanel(new BorderLayout());
         panel.setBackground(Color.CYAN);
         JLabel titleLabel = new JLabel("Buying an Investment");
-        titleLabel.setHorizontalAlignment(JLabel.LEFT); // Align title to the left
+        titleLabel.setHorizontalAlignment(JLabel.LEFT); 
         panel.add(titleLabel, BorderLayout.NORTH);
-        //GridLayout (5 rows, 1 column)
-        JPanel formPanel = new JPanel(new GridLayout(5, 1, 10, 10)); // 5 rows, 1 column
 
-        //TYPE OF INVESTMENT
+        //GridLayout (5 rows, 1 column)
+        JPanel formPanel = new JPanel(new GridLayout(5, 1, 10, 10));
+
+        //TYPE
         JPanel typePanel = new JPanel(new FlowLayout(FlowLayout.LEFT));
         JLabel typeLabel = new JLabel("Type:");
         JComboBox<String> typeDropdown = new JComboBox<>(new String[]{"Stock", "Mutual Fund"});
@@ -198,7 +360,7 @@ public class GUI {
         //SYMBOL
         JPanel symbolPanel = new JPanel(new FlowLayout(FlowLayout.LEFT));
         JLabel symbolLabel = new JLabel("Symbol:");
-        JTextField symbolField = new JTextField(15); // Limit width
+        JTextField symbolField = new JTextField(15);
         symbolPanel.add(symbolLabel);
         symbolPanel.add(symbolField);
         formPanel.add(symbolPanel);
@@ -206,15 +368,15 @@ public class GUI {
         //NAME
         JPanel namePanel = new JPanel(new FlowLayout(FlowLayout.LEFT));
         JLabel nameLabel = new JLabel("Name:");
-        JTextField nameField = new JTextField(15); // Limit width
+        JTextField nameField = new JTextField(15);
         namePanel.add(nameLabel);
         namePanel.add(nameField);
         formPanel.add(namePanel);
 
-        // Quantity
+        //Quantity
         JPanel quantityPanel = new JPanel(new FlowLayout(FlowLayout.LEFT));
         JLabel quantityLabel = new JLabel("Quantity:");
-        JTextField quantityField = new JTextField(15); // Limit width
+        JTextField quantityField = new JTextField(15);
         quantityPanel.add(quantityLabel);
         quantityPanel.add(quantityField);
         formPanel.add(quantityPanel);
@@ -222,10 +384,11 @@ public class GUI {
         //PRICE
         JPanel pricePanel = new JPanel(new FlowLayout(FlowLayout.LEFT));
         JLabel priceLabel = new JLabel("Price:");
-        JTextField priceField = new JTextField(15); // Limit width
+        JTextField priceField = new JTextField(15);
         pricePanel.add(priceLabel);
         pricePanel.add(priceField);
         formPanel.add(pricePanel);
+
         panel.add(formPanel, BorderLayout.CENTER);
 
         //BUTTONS PANEL
@@ -236,10 +399,10 @@ public class GUI {
         buttonsPanel.add(buyButton);
         panel.add(buttonsPanel, BorderLayout.SOUTH);
 
-        //MESSAGE PANEL (use border layout )
+        //MESSAGE PANEL
         JPanel messagePanel = new JPanel(new BorderLayout());
         JLabel messageLabel = new JLabel("Messages:");
-        JTextArea messageArea = new JTextArea(5, 30); // Consistent size
+        JTextArea messageArea = new JTextArea(5, 30);
         messageArea.setEditable(false);
         messageArea.setLineWrap(true);
         messageArea.setWrapStyleWord(true);
@@ -247,31 +410,34 @@ public class GUI {
         messagePanel.add(messageLabel, BorderLayout.NORTH);
         messagePanel.add(messageScrollPane, BorderLayout.CENTER);
         panel.add(messagePanel, BorderLayout.EAST);
-        //we have to attach listeners to buttons
-        BuyPanelListener buyListener = new BuyPanelListener(typeDropdown, symbolField, nameField, quantityField, priceField, messageArea);
+
+        //listeners
+        BuyPanelListener buyListener = new BuyPanelListener(
+                typeDropdown, symbolField, nameField, quantityField, priceField, messageArea);
         buyButton.addActionListener(buyListener);
         resetButton.addActionListener(buyListener);
+
         return panel;
     }
+
     /**
      * Creates the sell panel for selling investments.
      * @return the sell panel.
      */
-    //sell panel! use similar thing above 
     private JPanel createSellPanel() {
         JPanel panel = new JPanel(new BorderLayout());
         panel.setBackground(Color.CYAN);
         JLabel titleLabel = new JLabel("Selling an Investment");
-        titleLabel.setHorizontalAlignment(JLabel.LEFT); // Align title to the left
+        titleLabel.setHorizontalAlignment(JLabel.LEFT);
         panel.add(titleLabel, BorderLayout.NORTH);
 
-        //panel w/ GridLayout (3 rows, 1 column)
-        JPanel formPanel = new JPanel(new GridLayout(3, 1, 10, 10)); // 3 rows, 1 column
+        //form
+        JPanel formPanel = new JPanel(new GridLayout(3, 1, 10, 10));
 
         //SYMBOL
         JPanel symbolPanel = new JPanel(new FlowLayout(FlowLayout.LEFT));
         JLabel symbolLabel = new JLabel("Symbol:");
-        JTextField symbolField = new JTextField(15); // Limit width
+        JTextField symbolField = new JTextField(15);
         symbolPanel.add(symbolLabel);
         symbolPanel.add(symbolField);
         formPanel.add(symbolPanel);
@@ -279,7 +445,7 @@ public class GUI {
         //QUANT
         JPanel quantityPanel = new JPanel(new FlowLayout(FlowLayout.LEFT));
         JLabel quantityLabel = new JLabel("Quantity:");
-        JTextField quantityField = new JTextField(15); // Limit width
+        JTextField quantityField = new JTextField(15);
         quantityPanel.add(quantityLabel);
         quantityPanel.add(quantityField);
         formPanel.add(quantityPanel);
@@ -287,14 +453,14 @@ public class GUI {
         //PRICE
         JPanel pricePanel = new JPanel(new FlowLayout(FlowLayout.LEFT));
         JLabel priceLabel = new JLabel("Price:");
-        JTextField priceField = new JTextField(15); // Limit width
+        JTextField priceField = new JTextField(15);
         pricePanel.add(priceLabel);
         pricePanel.add(priceField);
         formPanel.add(pricePanel);
 
         panel.add(formPanel, BorderLayout.CENTER);
 
-        // BUTTONS PANEL WTH FLOWLAYOUT
+        // BUTTONS PANEL
         JPanel buttonsPanel = new JPanel(new FlowLayout(FlowLayout.CENTER, 20, 10));
         JButton resetButton = new JButton("Reset");
         JButton sellButton = new JButton("Sell");
@@ -302,10 +468,10 @@ public class GUI {
         buttonsPanel.add(sellButton);
         panel.add(buttonsPanel, BorderLayout.SOUTH);
 
-        // MSG PANEL WITH BORDER LAYOUT
+        // MESSAGE PANEL
         JPanel messagePanel = new JPanel(new BorderLayout());
         JLabel messageLabel = new JLabel("Messages:");
-        JTextArea messageArea = new JTextArea(5, 30); //keep it consistent ugh
+        JTextArea messageArea = new JTextArea(5, 30);
         messageArea.setEditable(false);
         messageArea.setLineWrap(true);
         messageArea.setWrapStyleWord(true);
@@ -314,7 +480,7 @@ public class GUI {
         messagePanel.add(messageScrollPane, BorderLayout.CENTER);
         panel.add(messagePanel, BorderLayout.EAST);
 
-        //attaching listen to buttons
+        //listeners
         SellPanelListener sellListener = new SellPanelListener(symbolField, quantityField, priceField, messageArea);
         sellButton.addActionListener(sellListener);
         resetButton.addActionListener(sellListener);
@@ -326,14 +492,14 @@ public class GUI {
      * Creates the update panel for updating investments.
      * @return the update panel.
      */
-    //update panel. remember nav.
     private JPanel createUpdatePanel() {
         JPanel panel = new JPanel(new BorderLayout());
-        panel.setBackground(Color.CYAN); // blue color :) check if it works because it didnt work for search panel. 
+        panel.setBackground(Color.CYAN); 
         JLabel titleLabel = new JLabel("Updating Investments");
-        titleLabel.setHorizontalAlignment(JLabel.LEFT); //align title toward leftside.
+        titleLabel.setHorizontalAlignment(JLabel.LEFT);
         panel.add(titleLabel, BorderLayout.NORTH);
-        JPanel formPanel = new JPanel(new GridLayout(3, 1, 10, 10)); //3 rows, 1 column w/ gridlayout
+
+        JPanel formPanel = new JPanel(new GridLayout(3, 1, 10, 10));
 
         //SYMBOL
         JPanel symbolPanel = new JPanel(new FlowLayout(FlowLayout.LEFT));
@@ -353,7 +519,7 @@ public class GUI {
         namePanel.add(updateNameField);
         formPanel.add(namePanel);
 
-        //PRICce
+        //PRICE
         JPanel pricePanel = new JPanel(new FlowLayout(FlowLayout.LEFT));
         JLabel priceLabel = new JLabel("Price:");
         updatePriceField = new JTextField(15);
@@ -363,7 +529,7 @@ public class GUI {
 
         panel.add(formPanel, BorderLayout.CENTER);
 
-        // Buttons Panel with FlowLayout
+        // Buttons Panel
         JPanel buttonsPanel = new JPanel(new FlowLayout(FlowLayout.CENTER, 20, 10));
         prevButton = new JButton("Prev");
         nextButton = new JButton("Next");
@@ -373,10 +539,10 @@ public class GUI {
         buttonsPanel.add(saveButton);
         panel.add(buttonsPanel, BorderLayout.SOUTH);
 
-        //MSG PANEL W/ BORDERLAYOUT
+        //MSG PANEL
         JPanel messagePanel = new JPanel(new BorderLayout());
         JLabel messageLabel = new JLabel("Messages:");
-        updateMessageArea = new JTextArea(5, 30); // Consistent size
+        updateMessageArea = new JTextArea(5, 30);
         updateMessageArea.setEditable(false);
         updateMessageArea.setLineWrap(true);
         updateMessageArea.setWrapStyleWord(true);
@@ -385,30 +551,27 @@ public class GUI {
         messagePanel.add(messageScrollPane, BorderLayout.CENTER);
         panel.add(messagePanel, BorderLayout.EAST);
 
-        //ATTACH LISTENER TO BUTTONS
+        //listener
         UpdatePanelListener updateListener = new UpdatePanelListener();
         prevButton.addActionListener(updateListener);
         nextButton.addActionListener(updateListener);
         saveButton.addActionListener(updateListener);
+
         return panel;
     }
-    
+
     /**
      * Creates the total gain panel for displaying portfolio gains.
      * @return the total gain panel.
      */
-
-   //total gain panel. OK HERE the blue isnt working why? ask ta
     private JPanel createTotalGainPanel() {
         JPanel panel = new JPanel(new BorderLayout());
-        panel.setBackground(Color.CYAN); //for some reason this doesnt work.
-
+        panel.setBackground(Color.CYAN);
         JLabel titleLabel = new JLabel("Total Gain");
-
-        titleLabel.setHorizontalAlignment(JLabel.LEFT); //align title towars left
+        titleLabel.setHorizontalAlignment(JLabel.LEFT);
         panel.add(titleLabel, BorderLayout.NORTH);
 
-        //TOP panel for total GAINS
+        //TOP panel
         JPanel topPanel = new JPanel(new FlowLayout(FlowLayout.LEFT, 20, 20));
         JLabel totalGainLabel = new JLabel("Total gain:");
         JTextField totalGainField = new JTextField(10);
@@ -419,10 +582,10 @@ public class GUI {
         topPanel.add(calculateButton);
         panel.add(topPanel, BorderLayout.NORTH);
 
-        //bottom panel for total gains
+        //bottom panel
         JPanel bottomPanel = new JPanel(new BorderLayout());
         JLabel individualGainsLabel = new JLabel("Individual Gains:");
-        JTextArea individualGainsArea = new JTextArea(5, 30); // Consistent size
+        JTextArea individualGainsArea = new JTextArea(5, 30);
         individualGainsArea.setEditable(false);
         individualGainsArea.setLineWrap(true);
         individualGainsArea.setWrapStyleWord(true);
@@ -431,60 +594,61 @@ public class GUI {
         bottomPanel.add(gainsScrollPane, BorderLayout.CENTER);
         panel.add(bottomPanel, BorderLayout.CENTER);
 
-        //listernr to buttons.
+        //listener
         TotalGainListenerButton gainButtonListener = new TotalGainListenerButton(totalGainField, individualGainsArea);
         calculateButton.addActionListener(gainButtonListener);
+
         return panel;
     }
+
     /**
      * Creates the search panel for searching investments.
      * @return the search panel.
      */
-    //search panel. 
     private JPanel createSearchPanel() {
         JPanel panel = new JPanel(new BorderLayout());
         panel.setBackground(Color.CYAN);
         JLabel titleLabel = new JLabel("Searching Investments");
-        titleLabel.setHorizontalAlignment(JLabel.LEFT); //align leftwords. 
+        titleLabel.setHorizontalAlignment(JLabel.LEFT);
         panel.add(titleLabel, BorderLayout.NORTH);
 
-        JPanel formPanel = new JPanel(new GridLayout(4, 1, 10, 10)); //4 rows 1 column
+        JPanel formPanel = new JPanel(new GridLayout(4, 1, 10, 10));
 
         //SYMBOL
         JPanel symbolPanel = new JPanel(new FlowLayout(FlowLayout.LEFT));
         JLabel symbolLabel = new JLabel("Symbol:");
-        JTextField symbolField = new JTextField(15); 
+        JTextField symbolField = new JTextField(15);
         symbolPanel.add(symbolLabel);
         symbolPanel.add(symbolField);
         formPanel.add(symbolPanel);
 
-        //KEYWORD (test this )
+        //KEYWORDS
         JPanel namePanel = new JPanel(new FlowLayout(FlowLayout.LEFT));
         JLabel nameLabel = new JLabel("Name Keywords:");
-        JTextField nameField = new JTextField(15); // Limit width
+        JTextField nameField = new JTextField(15);
         namePanel.add(nameLabel);
         namePanel.add(nameField);
         formPanel.add(namePanel);
 
-        //high Price
+        //low Price
         JPanel lowPricePanel = new JPanel(new FlowLayout(FlowLayout.LEFT));
         JLabel lowPriceLabel = new JLabel("Low Price:");
-        JTextField lowPriceField = new JTextField(15); // Limit width
+        JTextField lowPriceField = new JTextField(15);
         lowPricePanel.add(lowPriceLabel);
         lowPricePanel.add(lowPriceField);
         formPanel.add(lowPricePanel);
 
-        //lowPrice
+        //high Price
         JPanel highPricePanel = new JPanel(new FlowLayout(FlowLayout.LEFT));
         JLabel highPriceLabel = new JLabel("High Price:");
-        JTextField highPriceField = new JTextField(15); // Limit width
+        JTextField highPriceField = new JTextField(15);
         highPricePanel.add(highPriceLabel);
         highPricePanel.add(highPriceField);
         formPanel.add(highPricePanel);
 
         panel.add(formPanel, BorderLayout.CENTER);
 
-        //buttons panel (flowlayout)
+        //buttons panel
         JPanel buttonsPanel = new JPanel(new FlowLayout(FlowLayout.CENTER, 20, 10));
         JButton resetButton = new JButton("Reset");
         JButton searchButton = new JButton("Search");
@@ -492,10 +656,10 @@ public class GUI {
         buttonsPanel.add(searchButton);
         panel.add(buttonsPanel, BorderLayout.SOUTH);
 
-        //msg Panel () BorderLayout
+        //msg Panel
         JPanel messagePanel = new JPanel(new BorderLayout());
         JLabel resultLabel = new JLabel("Search Results:");
-        JTextArea resultArea = new JTextArea(5, 30); // Consistent size
+        JTextArea resultArea = new JTextArea(5, 30);
         resultArea.setEditable(false);
         resultArea.setLineWrap(true);
         resultArea.setWrapStyleWord(true);
@@ -504,13 +668,15 @@ public class GUI {
         messagePanel.add(resultScrollPane, BorderLayout.CENTER);
         panel.add(messagePanel, BorderLayout.EAST);
 
-        // listeners to buttons
-        SearchPanelListener searchListener = new SearchPanelListener(symbolField, nameField, lowPriceField, highPriceField, resultArea);
+        //listeners
+        SearchPanelListener searchListener = new SearchPanelListener(
+                symbolField, nameField, lowPriceField, highPriceField, resultArea);
         searchButton.addActionListener(searchListener);
         resetButton.addActionListener(searchListener);
 
         return panel;
     }
+
     /**
      * Displays the investment details in the update panel.
      * @param symbolField the text field for the investment symbol.
@@ -529,51 +695,52 @@ public class GUI {
     /**
      * Updates the navigation buttons in the update panel based on the current index.
      */
-    //for uopdating navigation buttons based on the cur index.
     private void updateNavigationButtons() {
         if (portfolio.getInvestments().isEmpty()) {
             prevButton.setEnabled(false);
             nextButton.setEnabled(false);
             saveButton.setEnabled(false);
-        } 
-        else {
+        } else {
             prevButton.setEnabled(currentIndex > 0);
             nextButton.setEnabled(currentIndex < portfolio.getInvestments().size() - 1);
             saveButton.setEnabled(true);
         }
     }
 
-     /**
+    /**
      * Listener for the welcome menu option.
      * Switches the current panel to the welcome panel.
      */
-    //listener Classes
-    //welcome menu listener
     private class WelcomeListener implements ActionListener {
         public void actionPerformed(ActionEvent e) {
-            swapPanel(welcomePanel); //change
+            swapPanel(welcomePanel);
         }
     }
+
     /**
      * Listener for the buy menu option.
      * Switches the current panel to the buy panel.
      */
-    //buy menu listener
     private class BuyListener implements ActionListener {
         public void actionPerformed(ActionEvent e) {
             swapPanel(buyPanel);
         }
     }
 
-   
-    //Sell Menu listener.
+    /**
+     * Listener for the sell menu option.
+     * Switches the current panel to the sell panel.
+     */
     private class SellListener implements ActionListener {
         public void actionPerformed(ActionEvent e) {
             swapPanel(sellPanel);
         }
     }
 
-    //updatemenu listener
+    /**
+     * Listener for the update menu option.
+     * Switches the current panel to the update panel and initializes the first investment.
+     */
     private class UpdateListener implements ActionListener {
         public void actionPerformed(ActionEvent e) {
             if (!portfolio.getInvestments().isEmpty()) {
@@ -587,8 +754,7 @@ public class GUI {
                     updateMessageArea.setText("Error displaying investment: " + ex.getMessage());
                     saveButton.setEnabled(false);
                 }
-            } 
-            else {
+            } else {
                 updateMessageArea.setText("No investments to update.");
                 prevButton.setEnabled(false);
                 nextButton.setEnabled(false);
@@ -598,38 +764,50 @@ public class GUI {
         }
     }
 
-   //total gain in menu listener
+    /**
+     * Listener for the total gain menu option.
+     * Switches the current panel to the total gain panel.
+     */
     private class TotalGainListener implements ActionListener {
         public void actionPerformed(ActionEvent e) {
             swapPanel(totalGainPanel);
         }
     }
 
-    //search menu listenre.
+    /**
+     * Listener for the search menu option.
+     * Switches the current panel to the search panel.
+     */
     private class SearchListener implements ActionListener {
         public void actionPerformed(ActionEvent e) {
             swapPanel(searchPanel);
         }
     }
 
-    //quit listener
+    /**
+     * Listener for the quit menu option.
+     * Saves the portfolio to a file and then exits the application.
+     */
     private class QuitListener implements ActionListener {
         public void actionPerformed(ActionEvent e) {
-            //save portfolio before quiting.... needs further development. 
+            //save portfolio before quitting
             try {
+                // Also changed to "investments.txt" to match load path
                 portfolio.saveToFile("investments.txt");
             } 
             catch (Exception ex) { 
                 System.out.println("Error saving portfolio: " + ex.getMessage());
-                System.exit(0); //exit if cant be saved
+                System.exit(0); 
             }
-            System.exit(1); //exit success if ti can be saved.
+            System.exit(1); 
         }
     }
 
-    //Listener Classes for Buy, Sell, Update Panels
+    //===== LISTENER CLASSES FOR BUY, SELL, UPDATE, TOTAL GAIN, SEARCH PANELS =====
 
-    //buy panel listeners
+    /**
+     * Listener for the Buy panel buttons.
+     */
     private class BuyPanelListener implements ActionListener {
         private JComboBox<String> typeDropdown;
         private JTextField symbolField;
@@ -638,7 +816,9 @@ public class GUI {
         private JTextField priceField;
         private JTextArea messageArea;
 
-        public BuyPanelListener(JComboBox<String> typeDropdown, JTextField symbolField, JTextField nameField, JTextField quantityField, JTextField priceField, JTextArea messageArea) {
+        public BuyPanelListener(JComboBox<String> typeDropdown, JTextField symbolField,
+                                JTextField nameField, JTextField quantityField,
+                                JTextField priceField, JTextArea messageArea) {
             this.typeDropdown = typeDropdown;
             this.symbolField = symbolField;
             this.nameField = nameField;
@@ -655,7 +835,8 @@ public class GUI {
                 String name = nameField.getText().trim();
                 String quantityText = quantityField.getText().trim();
                 String priceText = priceField.getText().trim();
-                //check if fields empty (must be filled in)
+
+                //check if fields empty
                 if (symbol.isEmpty() || name.isEmpty() || quantityText.isEmpty() || priceText.isEmpty()) {
                     messageArea.setText("All fields must be filled out!");
                     return;
@@ -671,7 +852,7 @@ public class GUI {
                         throw new InputMismatchException();
                     }
                 } 
-                catch (InputMismatchException ex) { //from exceptions slides. Wrong entry
+                catch (Exception ex) {
                     messageArea.setText("Quantity and Price must be positive numbers!");
                     return;
                 }
@@ -695,8 +876,9 @@ public class GUI {
         }
     }
 
-    //listener for sell panel buttons
-
+    /**
+     * Listener for the Sell panel buttons.
+     */
     private class SellPanelListener implements ActionListener {
         private JTextField symbolField;
         private JTextField quantityField;
@@ -710,6 +892,7 @@ public class GUI {
             this.priceField = priceField;
             this.messageArea = messageArea;
         }
+
         public void actionPerformed(ActionEvent e) {
             String command = e.getActionCommand();
             if (command.equals("Sell")) {
@@ -717,23 +900,23 @@ public class GUI {
                 String quantityText = quantityField.getText().trim();
                 String priceText = priceField.getText().trim();
 
-                //like ABOVE last panel (Buy) check for empty fields.
+                //check if fields empty
                 if (symbol.isEmpty() || quantityText.isEmpty() || priceText.isEmpty()) {
                     messageArea.setText("All fields must be filled out.");
                     return;
                 }
                 int quantity;
                 double price;
-                //validate quant and price
+
+                //validate quantity and price
                 try {
                     quantity = Integer.parseInt(quantityText);
                     price = Double.parseDouble(priceText);
-
                     if (quantity <= 0 || price <= 0) {
                         throw new InputMismatchException();
                     }
                 } 
-                catch (InputMismatchException ex) {
+                catch (Exception ex) {
                     messageArea.setText("Quantity and Price must be positive numbers.");
                     return;
                 }
@@ -759,13 +942,9 @@ public class GUI {
      * Listener for the Update panel navigation and actions.
      * Handles "Prev", "Next", and "Save" commands for navigating and updating investments.
      */
-
-    //update panel listeners. HARD
     private class UpdatePanelListener implements ActionListener {
-        //Navigation
         public void actionPerformed(ActionEvent e) {
             String command = e.getActionCommand();
-            //prev
             if (command.equals("Prev")) {
                 if (!portfolio.getInvestments().isEmpty() && currentIndex > 0) {
                     currentIndex--;
@@ -779,7 +958,6 @@ public class GUI {
                     }
                 }
             } 
-            //next
             else if (command.equals("Next")) {
                 if (!portfolio.getInvestments().isEmpty() && currentIndex < portfolio.getInvestments().size() - 1) {
                     currentIndex++;
@@ -805,8 +983,7 @@ public class GUI {
                         throw new InputMismatchException();
                     }
                 } 
-                //wrong entry
-                catch (InputMismatchException ex) {
+                catch (Exception ex) {
                     updateMessageArea.setText("Price must be a positive number.");
                     return;
                 }
@@ -815,6 +992,9 @@ public class GUI {
                     String result = portfolio.updatePrice(currentIndex, newPrice);
                     updateMessageArea.setText(result);
                     displayInvestment(updateSymbolField, updateNameField, updatePriceField, currentIndex);
+
+                    // Save the updated portfolio to file after updating the price
+                    portfolio.saveToFile("investments.txt");
                 } 
                 catch (Exception ex) {
                     updateMessageArea.setText(ex.getMessage());
@@ -822,12 +1002,11 @@ public class GUI {
             }
         }
     }
-     /**
+
+    /**
      * Listener for the Total Gain screen button.
      * Calculates and displays the total gain and individual gains of the portfolio.
      */
-
-    //calc total gain screen listeners
     private class TotalGainListenerButton implements ActionListener {
         private JTextField totalGainField;
         private JTextArea individualGainsArea;
@@ -836,6 +1015,7 @@ public class GUI {
             this.totalGainField = totalGainField;
             this.individualGainsArea = individualGainsArea;
         }
+
         public void actionPerformed(ActionEvent e) {
             String result = portfolio.getGain();
             String[] lines = result.split("\n");
@@ -845,22 +1025,25 @@ public class GUI {
                     int dollarIndex = line.indexOf("$");
                     if (dollarIndex != -1 && dollarIndex + 1 < line.length()) {
                         totalGainField.setText(line.substring(dollarIndex + 1));
-                    } 
-                    else {
+                    } else {
                         totalGainField.setText("");
                     }
-                } 
-                else {
+                } else {
                     individualGains.append(line).append("\n");
                 }
             }
             individualGainsArea.setText(individualGains.toString());
+
+            // Optionally, save the updated gains to file
+            try {
+                portfolio.saveToFile("investments.txt");
+            } catch (Exception ex) {
+                System.out.println("Error saving portfolio after calculating gains: " + ex.getMessage());
+            }
         }
     }
 
-    //search panel listenres
-
- /**
+    /**
      * Listener for the Search panel.
      * Handles search and reset operations for investments based on user input.
      */
@@ -871,14 +1054,16 @@ public class GUI {
         private JTextField highPriceField;
         private JTextArea resultArea;
 
-        public SearchPanelListener(JTextField symbolField, JTextField nameField, JTextField lowPriceField, JTextField highPriceField,JTextArea resultArea) {
+        public SearchPanelListener(JTextField symbolField, JTextField nameField,
+                                   JTextField lowPriceField, JTextField highPriceField,
+                                   JTextArea resultArea) {
             this.symbolField = symbolField;
             this.nameField = nameField;
             this.lowPriceField = lowPriceField;
             this.highPriceField = highPriceField;
             this.resultArea = resultArea;
         }
-        //override
+
         public void actionPerformed(ActionEvent e) {
             String command = e.getActionCommand();
             if (command.equals("Search")) {
@@ -889,11 +1074,11 @@ public class GUI {
                 double lowPrice = -1;
                 double highPrice = -1;
 
-                //price range parce.
+                //price range parse
                 try {
                     if (!lowPriceText.isEmpty()) {
                         lowPrice = Double.parseDouble(lowPriceText);
-                        if (lowPrice < 0) throw new InputMismatchException(); //wrong input checker.
+                        if (lowPrice < 0) throw new InputMismatchException();
                     }
                     if (!highPriceText.isEmpty()) {
                         highPrice = Double.parseDouble(highPriceText);
@@ -907,6 +1092,9 @@ public class GUI {
 
                 String result = portfolio.search(symbol, keywords, lowPrice, highPrice);
                 resultArea.setText(result);
+
+                // Optionally, save after search if any changes are made
+                // portfolio.saveToFile("investments.txt");
             } 
             else if (command.equals("Reset")) {
                 symbolField.setText("");

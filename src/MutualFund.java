@@ -1,5 +1,4 @@
-package Simutrade;
-
+package ePortfolio;
 /**
  * Represents a mutual fund investment, a type of investment without a commission fee for book value calculations.
  */
