@@ -1,40 +1,34 @@
 package ePortfolio;
-
-import java.io.File;
+import java.io.File; 
 import java.io.FileInputStream;
 import java.io.FileOutputStream;
 import java.io.PrintWriter;
 import java.io.FileNotFoundException;
 import java.util.ArrayList;
 import java.util.HashMap;
-import java.util.Scanner;
+import java.util.Scanner; 
 import java.util.StringTokenizer;
 
 /**
- * Portfolio of investments including stocks and mutual funds,
- * plus a current/starting balance that persists between sessions.
+ *Portfolio of investments including stocks and mutual funds,
+ *plus a current/starting balance that persists between sessions.
  */
 public class Portfolio {
     // Array list to store all investments
     private ArrayList<Investment> investments = new ArrayList<>();
 
-    // Map: investment symbols to objects
-    private HashMap<String, Investment> symbolMap = new HashMap<>();
+    //hash mappin
+    private HashMap<String, Investment> symbolMap = new HashMap<>(); //investment symbols to objects
+    private HashMap<String, ArrayList<Investment>> keywordMap = new HashMap<>();//mapkeywords to investments that contain those keywords in their names
+    private double startingBalance = 0.0;    //track the users starting/current balance
+    private double realizedGains = 0.0;    //tracks total realized gains so gains arent lost on selling
 
-    // Map keywords to investments that contain those keywords in their names
-    private HashMap<String, ArrayList<Investment>> keywordMap = new HashMap<>();
-
-    // Track the user's starting/current balance
-    private double startingBalance = 0.0;
-
-    // Track total realized gains so gains are not lost on selling
-    private double realizedGains = 0.0;
 
     /**
-     * Loads portfolio data (balance and investments) from a file.
-     * If the file doesn't exist, it creates a new one.
-     * @param filename the file name to load data from
-     * @throws Exception if there is a problem reading the file
+     *Loads portfolio data (balance and investments) from a file.
+     *If the file doesn't exist, it creates a new one.
+     *@param filename the file name to load data from
+     *@throws Exception if there is a problem reading the file
      */
     public void loadFromFile(String filename) throws Exception {
         FileInputStream fileInput = null;
@@ -54,24 +48,24 @@ public class Portfolio {
 
             boolean balanceLoaded = false;
 
+            //Parsing machine
             while (fileScanner.hasNextLine()) {
                 String line = fileScanner.nextLine().trim();
 
                 if (line.isEmpty()) {
-                    continue; // skip empty lines
+                    continue; //skips empty lines
                 }
 
-                // If we detect the CURRENT_BALANCE line, parse it
+                //ioff we detect the CURRENT_BALANCE line, parse it/
                 if (line.startsWith("CURRENT_BALANCE")) {
                     String balanceValue = extractValue(line);
                     this.startingBalance = Double.parseDouble(balanceValue);
-                    // Set realizedGains to 0 or do not override if you prefer persisting gains
+                    //sets realizedGains to 0 or do not override if you prefer persisting gains
                     balanceLoaded = true;
                     continue;
                 }
 
-                // If not the balance line, it should be an investment record
-                // We'll expect multiple lines for each investment.
+                //If not the balance line, it should be an investment record. Wwewil expect multiple lines for each investment.
                 if (line.startsWith("type")) {
                     // Read 6 lines total: type, symbol, name, quantity, price, bookValue
                     String typeLine = line;
@@ -96,9 +90,11 @@ public class Portfolio {
                     Investment investment;
                     if (assetType.equalsIgnoreCase("stock")) {
                         investment = new Stock(symbol, name, quantity, price);
-                    } else if (assetType.equalsIgnoreCase("mutualfund")) {
+                    } 
+                    else if (assetType.equalsIgnoreCase("mutualfund")) {
                         investment = new MutualFund(symbol, name, quantity, price);
-                    } else {
+                    } 
+                    else {
                         continue; // skip invalid
                     }
 
@@ -116,12 +112,15 @@ public class Portfolio {
 
             System.out.println("Portfolio info loaded from " + filename);
 
-        } catch (FileNotFoundException e) {
+        } 
+        catch (FileNotFoundException e) {
             System.out.println("File not found: " + filename + ". Creating a new file.");
             saveToFile(filename);
-        } catch (Exception e) {
+        } 
+        catch (Exception e) {
             throw new Exception("Error loading portfolio: " + e.getMessage());
-        } finally {
+        } 
+        finally {
             if (fileScanner != null) {
                 fileScanner.close();
             }
@@ -132,25 +131,25 @@ public class Portfolio {
     }
 
     /**
-     * Saves portfolio data (balance and investments) to a file.
-     * @param filename the file name to save data to
-     * @throws Exception if there is a problem saving the file
+     *Saves portfolio data (balance and investments) to a file.
+     *@param filename the file name to save data to
+     *@throws Exception if there is a problem saving the file
      */
     public void saveToFile(String filename) throws Exception {
         PrintWriter writer = null;
 
         try {
             writer = new PrintWriter(new FileOutputStream(new File(filename)));
-
-            // First, write the current balance
+            //1) write the current balance
             writer.println("CURRENT_BALANCE = \"" + this.startingBalance + "\"");
             writer.println();
 
-            // Then, write each investment
+            //2) write each investment.
             for (Investment investment : investments) {
                 if (investment instanceof Stock) {
                     writer.println("type = \"stock\"");
-                } else if (investment instanceof MutualFund) {
+                } 
+                else if (investment instanceof MutualFund) {
                     writer.println("type = \"mutualfund\"");
                 }
 
@@ -163,9 +162,11 @@ public class Portfolio {
             }
 
             System.out.println("Portfolio saved to " + filename);
-        } catch (FileNotFoundException e) {
+        } 
+        catch (FileNotFoundException e) {
             throw new Exception("Error cannot save file to " + filename);
-        } finally {
+        } 
+        finally {
             if (writer != null) {
                 writer.close();
             }
@@ -268,30 +269,30 @@ public class Portfolio {
             return "Updated investment: " + existingInvestment + "\n";
         }
 
-        // Create new investment
+        //create new investment.
         Investment newInvestment;
         if (type.equalsIgnoreCase("Stock")) {
             newInvestment = new Stock(symbol, name, quantity, price);
-        } else if (type.equalsIgnoreCase("Mutual Fund")) {
+        } 
+        else if (type.equalsIgnoreCase("Mutual Fund")) {
             newInvestment = new MutualFund(symbol, name, quantity, price);
-        } else {
+        } 
+        else {
             throw new Exception("Invalid investment type.");
         }
-
         investments.add(newInvestment);
         symbolMap.put(symbol.toLowerCase(), newInvestment);
         addToKeywordMap(name, newInvestment);
-
         return "Added new investment: " + newInvestment + "\n";
     }
 
     /**
-     * Sells some or all of an investment.
-     * @param symbol The symbol of the investment to sell.
-     * @param sellQuantity The quantity to sell.
-     * @param sellPrice The price at which to sell each unit.
-     * @return A message indicating the result of the sale.
-     * @throws Exception if there is an error during the sell operation.
+     *Sells some or all of an investment.
+     *@param symbol The symbol of the investment to sell.
+     *@param sellQuantity The quantity to sell.
+     *@param sellPrice The price at which to sell each unit.
+     *@return A message indicating the result of the sale.
+     *@throws Exception if there is an error during the sell operation.
      */
     public String sell(String symbol, int sellQuantity, double sellPrice) throws Exception {
         if (symbol == null || symbol.isEmpty()) {
@@ -315,10 +316,9 @@ public class Portfolio {
 
         int oldQuantity = investment.getQuantity();
         double oldBookValue = investment.getBookValue();
-
         double payment = sellPrice * sellQuantity;
 
-        // Fees
+        //fees
         if (investment instanceof Stock) {
             payment -= 9.99;
         } else if (investment instanceof MutualFund) {
@@ -332,35 +332,28 @@ public class Portfolio {
         double realizedFromThisSale = payment - portionOfBookValue;
         realizedGains += realizedFromThisSale;
 
-        // Optional: Add the payment to the startingBalance if you track real-time cashBalance
-        // e.g., this.startingBalance += payment;
-
         int newQuantity = oldQuantity - sellQuantity;
         if (newQuantity > 0) {
             double newBookValue = oldBookValue - portionOfBookValue;
             investment.setQuantity(newQuantity);
             investment.setBookValue(newBookValue);
-            return "Payment received: $" + String.format("%.2f", payment) +
-                   "\nRealized gain from sale: $" + String.format("%.2f", realizedFromThisSale) +
-                   "\nUpdated investment: " + investment + "\n";
-        } else {
-            // Remove investment
+            return "Payment received: $" + String.format("%.2f", payment) +"\nRealized gain from sale: $" + String.format("%.2f", realizedFromThisSale) +"\nUpdated investment: " + investment + "\n";
+        } 
+        else {
+            //remove investment
             investments.remove(investment);
             symbolMap.remove(symbol.toLowerCase());
             removeFromKeywordMap(investment.getName(), investment);
-
-            return "Payment received: $" + String.format("%.2f", payment) +
-                   "\nRealized gain from sale: $" + String.format("%.2f", realizedFromThisSale) +
-                   "\nInvestment sold completely and removed from portfolio.\n";
+            return "Payment received: $" + String.format("%.2f", payment) +"\nRealized gain from sale: $" + String.format("%.2f", realizedFromThisSale) + "\nInvestment sold completely and removed from portfolio.\n";
         }
     }
 
     /**
-     * Updates the price of an investment by its position in the list.
-     * @param index The index of the investment to update.
-     * @param newPrice The new price to set.
-     * @return A message indicating the result of the update.
-     * @throws Exception if there is an error during the update.
+     *Updates the price of an investment by its position in the list.
+     *@param index The index of the investment to update.
+     *@param newPrice The new price to set.
+     *@return A message indicating the result of the update.
+     *@throws Exception if there is an error during the update.
      */
     public String updatePrice(int index, double newPrice) throws Exception {
         if (index < 0 || index >= investments.size()) {
@@ -369,50 +362,46 @@ public class Portfolio {
         if (newPrice <= 0) {
             throw new Exception("Price must be positive.");
         }
-
         Investment investment = investments.get(index);
         investment.setPrice(newPrice);
-
         return "Updated investment: " + investment + "\n";
     }
 
     /**
-     * Calculates the total gain (realized + unrealized).
-     * @return A string detailing individual and total gains.
+     *Calculates the total gain (realized + unrealized).
+     *@return A string detailing individual and total gains.
      */
     public String getGain() {
         double totalGain = realizedGains;
         String result = "";
-
         for (Investment investment : investments) {
             double gain = investment.calculateGain();
             result += investment.getSymbol() + ": $" + String.format("%.2f", gain) + "\n";
             totalGain += gain;
         }
-
         result += "Total gain: $" + String.format("%.2f", totalGain) + "\n";
         return result;
     }
 
     /**
-     * Searches for investments using symbol, keywords, or price range.
-     * @param symbol The symbol to search for.
-     * @param keywords Keywords in the name to search for.
-     * @param lowPrice The lower bound for price.
-     * @param highPrice The upper bound for price.
-     * @return A string listing all matching investments.
+     *Searches for investments using symbol, keywords, or price range.
+     *@param symbol The symbol to search for.
+     *@param keywords Keywords in the name to search for.
+     *@param lowPrice The lower bound for price.
+     *@param highPrice The upper bound for price.
+     *@return A string listing all matching investments.
      */
     public String search(String symbol, String keywords, double lowPrice, double highPrice) {
         ArrayList<Investment> matchedInvestments = new ArrayList<>();
 
-        // Search by symbol
+        //serach by symbol
         if (!symbol.isEmpty()) {
             Investment investment = symbolMap.get(symbol.toLowerCase());
             if (investment != null) {
                 matchedInvestments.add(investment);
             }
         }
-        // Or by keywords
+        //search by keyword.
         else if (!keywords.isEmpty()) {
             String[] keywordArray = keywords.toLowerCase().split("\\s+");
             HashMap<Investment, Integer> investmentCount = new HashMap<>();
@@ -430,12 +419,12 @@ public class Portfolio {
                 }
             }
         }
-        // Or all
+        //all searc.
         else {
             matchedInvestments.addAll(investments);
         }
 
-        // Filter by price range
+        //filter by price range.
         ArrayList<Investment> finalMatchedInvestments = new ArrayList<>();
         for (Investment investment : matchedInvestments) {
             boolean withinLow = (lowPrice == -1) || (investment.getPrice() >= lowPrice);
@@ -456,7 +445,7 @@ public class Portfolio {
     }
 
     /**
-     * Clears all investments from the portfolio.
+     *clear all investments from the portfolio.
      */
     public void clearAllInvestments() {
         investments.clear();
@@ -466,7 +455,7 @@ public class Portfolio {
     }
 
     /**
-     * Retrieves a copy of all investments.
+     *retrieve a copy of all investments.
      * @return A list of all investments.
      */
     public ArrayList<Investment> getInvestments() {
@@ -474,16 +463,16 @@ public class Portfolio {
     }
 
     /**
-     * Sets the starting balance.
-     * @param balance The new starting balance.
+     *sets the starting balance.
+     *@param balance The new starting balance.
      */
     public void setStartingBalance(double balance) {
         this.startingBalance = balance;
     }
 
     /**
-     * Retrieves the starting balance.
-     * @return The starting balance.
+     *retrieves the starting balance.
+     *@return The starting balance.
      */
     public double getStartingBalance() {
         return startingBalance;
