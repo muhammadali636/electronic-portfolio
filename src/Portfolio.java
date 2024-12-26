@@ -1,32 +1,35 @@
 package ePortfolio;
+
+//Files
 import java.io.File; 
 import java.io.FileInputStream;
 import java.io.FileOutputStream;
 import java.io.PrintWriter;
+
+//exception
 import java.io.FileNotFoundException;
+
 import java.util.ArrayList;
 import java.util.HashMap;
 import java.util.Scanner; 
 import java.util.StringTokenizer;
 
 /**
- *Portfolio of investments including stocks and mutual funds,
+ *portfolio of investments including stocks and mutual funds,
  *plus a current/starting balance that persists between sessions.
  */
 public class Portfolio {
-    // Array list to store all investments
-    private ArrayList<Investment> investments = new ArrayList<>();
+    private ArrayList<Investment> investments = new ArrayList<>();    //array list to store all investments///
 
     //hash mappin
     private HashMap<String, Investment> symbolMap = new HashMap<>(); //investment symbols to objects
     private HashMap<String, ArrayList<Investment>> keywordMap = new HashMap<>();//mapkeywords to investments that contain those keywords in their names
-    private double startingBalance = 0.0;    //track the users starting/current balance
-    private double realizedGains = 0.0;    //tracks total realized gains so gains arent lost on selling
-
+    private double startingBalance = 0.0;   //track users starting/curent balance
+    private double realizedGains = 0.0;             //tracks total realized gains so gains arent lost on selling
 
     /**
-     *Loads portfolio data (balance and investments) from a file.
-     *If the file doesn't exist, it creates a new one.
+     *Loads portfolio data liek balance and investments from a text file.
+     *If the file doesnt exist it creates a new one.
      *@param filename the file name to load data from
      *@throws Exception if there is a problem reading the file
      */
@@ -37,7 +40,7 @@ public class Portfolio {
         try {
             File file = new File(filename);
             if (!file.exists()) {
-                // If file doesn't exist, create a new one with default settings
+                //if file doesnt exist we must create a new one with default settings
                 saveToFile(filename);
                 System.out.println("File not found: " + filename + ". Created a new file.");
                 return;
@@ -55,7 +58,6 @@ public class Portfolio {
                 if (line.isEmpty()) {
                     continue; //skips empty lines
                 }
-
                 //ioff we detect the CURRENT_BALANCE line, parse it/
                 if (line.startsWith("CURRENT_BALANCE")) {
                     String balanceValue = extractValue(line);
@@ -67,7 +69,7 @@ public class Portfolio {
 
                 //If not the balance line, it should be an investment record. Wwewil expect multiple lines for each investment.
                 if (line.startsWith("type")) {
-                    // Read 6 lines total: type, symbol, name, quantity, price, bookValue
+                    //read 6 lines total: type, symbol, name, quantity, price, bookValue
                     String typeLine = line;
                     if (!fileScanner.hasNextLine()) break;
                     String symbolLine = fileScanner.nextLine().trim();
@@ -95,7 +97,7 @@ public class Portfolio {
                         investment = new MutualFund(symbol, name, quantity, price);
                     } 
                     else {
-                        continue; // skip invalid
+                        continue; //skip invalid
                     }
 
                     investment.setBookValue(bookValue);
@@ -106,7 +108,7 @@ public class Portfolio {
             }
 
             if (!balanceLoaded) {
-                // If there's no balance line in file, default to 0
+                //if there's no balance line in file, default to 0
                 this.startingBalance = 0.0;
             }
 
@@ -174,8 +176,8 @@ public class Portfolio {
     }
 
     /**
-     * Helper method to extract the value in lines like:
-     * CURRENT_BALANCE = "1000.0"
+     *helper to extract value in lines like:
+     *CURRENT_BALANCE = "1000.0"
      * or type = "stock"
      * @param line The line containing the key-value pair.
      * @return The extracted value as a String.
@@ -185,9 +187,9 @@ public class Portfolio {
     }
 
     /**
-     * Adds an investment's keywords to the keyword map.
-     * @param name The name of the investment.
-     * @param investment The investment to add.
+     *Adds an investment's keywords to the keyword map.
+     *@param name name of the investment.
+     *@param investment investment to add.
      */
     private void addToKeywordMap(String name, Investment investment) {
         StringTokenizer tokenizer = new StringTokenizer(name.toLowerCase());
@@ -202,9 +204,9 @@ public class Portfolio {
     }
 
     /**
-     * Removes an investment's keywords from the keyword map.
-     * @param name The name of the investment.
-     * @param investment The investment to remove.
+     *Removes an investment's keywords from the keyword map.
+     *@param name  name of the investment.
+     *@param investment investment to remove.
      */
     private void removeFromKeywordMap(String name, Investment investment) {
         StringTokenizer tokenizer = new StringTokenizer(name.toLowerCase());
@@ -221,13 +223,13 @@ public class Portfolio {
     }
 
     /**
-     * Buys a new investment or adds to an existing one.
-     * @param type The type of investment ("Stock" or "Mutual Fund").
-     * @param symbol Unique symbol for the investment.
-     * @param name Name of the investment.
-     * @param quantity Quantity to buy.
-     * @param price Price per unit.
-     * @return A message indicating the result of the operation.
+     *Buys a new investment or adds to an existing one.
+     *@param type  type of investment ("Stock" or "Mutual Fund").
+     *@param symbol unique symbol for  investment.
+     *@param name Name of the investment.
+     *@param quantity Quantity to buy.
+     *@param price Price per unit.
+     *@return A message indicating the result of the operation.
      * @throws Exception if there is an error during the buy operation.
      */
     public String buy(String type, String symbol, String name, int quantity, double price) throws Exception {
@@ -244,32 +246,51 @@ public class Portfolio {
             throw new Exception("Price must be positive.");
         }
 
+        // Calculate base cost
         double cost = price * quantity;
-        // Optional: Check if you want to deduct from balance
-        // e.g., if (cost > this.startingBalance) { throw new Exception("Insufficient funds."); }
+
+        // Include commission or fee on buying:
+        // If it's a stock, add $9.99; if it's a mutual fund, add $45.00
+        if (type.equalsIgnoreCase("Stock")) {
+            cost += 9.99;
+        } 
+        else if (type.equalsIgnoreCase("Mutual Fund")) {
+            cost += 45.00;
+        }
+
+        //checs if the user has enough balance
+        if (cost > this.startingBalance) {
+            throw new Exception("Insufficient balance to buy. " + "Cost is $" + String.format("%.2f", cost) + " but current balance is $" + String.format("%.2f", this.startingBalance));
+        }
+
+        //sub cost from the starting balance
+        this.startingBalance -= cost;
 
         Investment existingInvestment = symbolMap.get(symbol.toLowerCase());
 
         if (existingInvestment != null) {
-            // Validate type and name
-            if ((type.equalsIgnoreCase("Stock") && !(existingInvestment instanceof Stock)) ||
-                (type.equalsIgnoreCase("Mutual Fund") && !(existingInvestment instanceof MutualFund))) {
+            //make sure type and name
+            if ((type.equalsIgnoreCase("Stock") && !(existingInvestment instanceof Stock)) || (type.equalsIgnoreCase("Mutual Fund") && !(existingInvestment instanceof MutualFund))) {
                 throw new Exception("Error: Symbol " + symbol + " is already used for a different investment type.");
             }
             if (!existingInvestment.getName().equalsIgnoreCase(name)) {
                 throw new Exception("Error: Investment with symbol " + symbol + " already exists with a different name.");
             }
 
+            // Update existing investment's quantity/price/bookValue
             existingInvestment.setQuantity(existingInvestment.getQuantity() + quantity);
             existingInvestment.setPrice(price);
             existingInvestment.setBookValue(
                 existingInvestment.getBookValue() + existingInvestment.calculateBookValue(quantity, price)
             );
 
+            // Auto-save changes
+            saveToFile("lib/investments.txt");
+
             return "Updated investment: " + existingInvestment + "\n";
         }
 
-        //create new investment.
+        //createa  new investment
         Investment newInvestment;
         if (type.equalsIgnoreCase("Stock")) {
             newInvestment = new Stock(symbol, name, quantity, price);
@@ -280,9 +301,14 @@ public class Portfolio {
         else {
             throw new Exception("Invalid investment type.");
         }
+
         investments.add(newInvestment);
         symbolMap.put(symbol.toLowerCase(), newInvestment);
         addToKeywordMap(name, newInvestment);
+
+        //auto-save changes
+        saveToFile("lib/investments.txt");
+
         return "Added new investment: " + newInvestment + "\n";
     }
 
@@ -332,19 +358,30 @@ public class Portfolio {
         double realizedFromThisSale = payment - portionOfBookValue;
         realizedGains += realizedFromThisSale;
 
+        //add  net payment to current balance
+        this.startingBalance += payment;
+
         int newQuantity = oldQuantity - sellQuantity;
         if (newQuantity > 0) {
             double newBookValue = oldBookValue - portionOfBookValue;
             investment.setQuantity(newQuantity);
             investment.setBookValue(newBookValue);
-            return "Payment received: $" + String.format("%.2f", payment) +"\nRealized gain from sale: $" + String.format("%.2f", realizedFromThisSale) +"\nUpdated investment: " + investment + "\n";
+
+            //autosav -save changes
+            saveToFile("lib/investments.txt");
+
+            return "Payment received: $" + String.format("%.2f", payment) + "\nRealized gain from sale: $" + String.format("%.2f", realizedFromThisSale) + "\nUpdated investment: " + investment + "\n";
         } 
         else {
-            //remove investment
+            //iff newQuantity == 0, fully remove the investment
             investments.remove(investment);
             symbolMap.remove(symbol.toLowerCase());
             removeFromKeywordMap(investment.getName(), investment);
-            return "Payment received: $" + String.format("%.2f", payment) +"\nRealized gain from sale: $" + String.format("%.2f", realizedFromThisSale) + "\nInvestment sold completely and removed from portfolio.\n";
+
+            //autosave changes
+            saveToFile("lib/investments.txt");
+
+            return "Payment received: $" + String.format("%.2f", payment) + "\nRealized gain from sale: $" + String.format("%.2f", realizedFromThisSale) + "\nInvestment sold completely and removed from portfolio.\n";
         }
     }
 
@@ -364,6 +401,10 @@ public class Portfolio {
         }
         Investment investment = investments.get(index);
         investment.setPrice(newPrice);
+
+        // Auto-save changes
+        saveToFile("lib/investments.txt");
+
         return "Updated investment: " + investment + "\n";
     }
 
@@ -455,7 +496,7 @@ public class Portfolio {
     }
 
     /**
-     *retrieve a copy of all investments.
+     *get back a copy of all investments.
      * @return A list of all investments.
      */
     public ArrayList<Investment> getInvestments() {
