@@ -1,2 +1,0 @@
-CURRENT_BALANCE = "0.0"
-
