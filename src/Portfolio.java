@@ -8,14 +8,18 @@ import java.io.PrintWriter;
 
 //exception
 import java.io.FileNotFoundException;
-
+import java.sql.Connection;
+import java.sql.DriverManager;
+import java.sql.ResultSet;
+import java.sql.SQLException;
+import java.sql.Statement;
 import java.util.ArrayList;
 import java.util.HashMap;
 import java.util.Scanner; 
 import java.util.StringTokenizer;
 
 /**
- *portfolio of investments including stocks and mutual funds,
+ * portfolio of investments including stocks and mutual funds,
  *plus a current/starting balance that persists between sessions.
  */
 public class Portfolio {
@@ -27,77 +31,54 @@ public class Portfolio {
     private double startingBalance = 0.0;   //track users starting/curent balance
     private double realizedGains = 0.0;             //tracks total realized gains so gains arent lost on selling
 
-    /**
-     *Loads portfolio data liek balance and investments from a text file.
-     *If the file doesnt exist it creates a new one.
-     *@param filename the file name to load data from
-     *@throws Exception if there is a problem reading the file
-     */
-    public void loadFromFile(String filename) throws Exception {
-        FileInputStream fileInput = null;
-        Scanner fileScanner = null;
 
+    /**
+     *(ADDED) Loads portfolio data from an SQLite database, including realizedGains.
+     *@param dbPath path to the SQLite database.
+     *@throws Exception if there's a problem reading the database.
+     */
+    public void loadFromDatabase(String dbPath) throws Exception {
+        Connection conn = null;
         try {
-            File file = new File(filename);
-            if (!file.exists()) {
-                //if file doesnt exist we must create a new one with default settings
-                saveToFile(filename);
-                System.out.println("File not found: " + filename + ". Created a new file.");
-                return;
+            conn = DriverManager.getConnection("jdbc:sqlite:" + dbPath);
+
+            //First clear any existing data in the portfolio (optional).
+            clearAllInvestments();
+            this.startingBalance = 0.0;
+            this.realizedGains = 0.0;
+
+            //Create tables if they don't exist:
+            try (Statement stmt = conn.createStatement()) {
+                //table for investments
+                stmt.executeUpdate("CREATE TABLE IF NOT EXISTS Investments (" +"symbol TEXT PRIMARY KEY," +"type TEXT," +"name TEXT," +"quantity INTEGER," +"price DOUBLE," +"bookValue DOUBLE" +");");
+
+                //table for realized gains
+                stmt.executeUpdate("CREATE TABLE IF NOT EXISTS RealizedMeta (" +"id INTEGER PRIMARY KEY," +"realizedGains DOUBLE" +");");
+
+                //table for current balance
+                stmt.executeUpdate("CREATE TABLE IF NOT EXISTS BalanceMeta (" +"id INTEGER PRIMARY KEY," +"currentBalance DOUBLE" +");");
             }
 
-            fileInput = new FileInputStream(file);
-            fileScanner = new Scanner(fileInput);
-
-            boolean balanceLoaded = false;
-
-            //Parsing machine
-            while (fileScanner.hasNextLine()) {
-                String line = fileScanner.nextLine().trim();
-
-                if (line.isEmpty()) {
-                    continue; //skips empty lines
-                }
-                //ioff we detect the CURRENT_BALANCE line, parse it/
-                if (line.startsWith("CURRENT_BALANCE")) {
-                    String balanceValue = extractValue(line);
-                    this.startingBalance = Double.parseDouble(balanceValue);
-                    //sets realizedGains to 0 or do not override if you prefer persisting gains
-                    balanceLoaded = true;
-                    continue;
-                }
-
-                //If not the balance line, it should be an investment record. Wwewil expect multiple lines for each investment.
-                if (line.startsWith("type")) {
-                    //read 6 lines total: type, symbol, name, quantity, price, bookValue
-                    String typeLine = line;
-                    if (!fileScanner.hasNextLine()) break;
-                    String symbolLine = fileScanner.nextLine().trim();
-                    if (!fileScanner.hasNextLine()) break;
-                    String nameLine = fileScanner.nextLine().trim();
-                    if (!fileScanner.hasNextLine()) break;
-                    String quantityLine = fileScanner.nextLine().trim();
-                    if (!fileScanner.hasNextLine()) break;
-                    String priceLine = fileScanner.nextLine().trim();
-                    if (!fileScanner.hasNextLine()) break;
-                    String bookValueLine = fileScanner.nextLine().trim();
-
-                    String assetType = extractValue(typeLine);
-                    String symbol = extractValue(symbolLine);
-                    String name = extractValue(nameLine);
-                    int quantity = Integer.parseInt(extractValue(quantityLine));
-                    double price = Double.parseDouble(extractValue(priceLine));
-                    double bookValue = Double.parseDouble(extractValue(bookValueLine));
+            //Load the investments
+            try (Statement stmt = conn.createStatement();
+                 ResultSet rs = stmt.executeQuery("SELECT symbol,type,name,quantity,price,bookValue FROM Investments")) {
+                while (rs.next()) {
+                    String symbol = rs.getString("symbol");
+                    String type = rs.getString("type");
+                    String name = rs.getString("name");
+                    int quantity = rs.getInt("quantity");
+                    double price = rs.getDouble("price");
+                    double bookValue = rs.getDouble("bookValue");
 
                     Investment investment;
-                    if (assetType.equalsIgnoreCase("stock")) {
+                    if ("Stock".equalsIgnoreCase(type)) {
                         investment = new Stock(symbol, name, quantity, price);
                     } 
-                    else if (assetType.equalsIgnoreCase("mutualfund")) {
+                    else if ("MutualFund".equalsIgnoreCase(type)) {
                         investment = new MutualFund(symbol, name, quantity, price);
                     } 
                     else {
-                        continue; //skip invalid
+                        continue; 
                     }
 
                     investment.setBookValue(bookValue);
@@ -107,70 +88,91 @@ public class Portfolio {
                 }
             }
 
-            if (!balanceLoaded) {
-                //if there's no balance line in file, default to 0
-                this.startingBalance = 0.0;
+            //load realized gains from RealizedMeta
+            try (Statement stmt = conn.createStatement();
+                 ResultSet rs = stmt.executeQuery("SELECT realizedGains FROM RealizedMeta WHERE id=1")) {
+                if (rs.next()) {
+                    this.realizedGains = rs.getDouble("realizedGains");
+                }
             }
 
-            System.out.println("Portfolio info loaded from " + filename);
+            //load current balance from BalanceMeta
+            try (Statement stmt = conn.createStatement();
+                 ResultSet rs = stmt.executeQuery("SELECT currentBalance FROM BalanceMeta WHERE id=1")) {
+                if (rs.next()) {
+                    this.startingBalance = rs.getDouble("currentBalance");
+                }
+            }
 
+            System.out.println("Portfolio info loaded from database: " + dbPath);
         } 
-        catch (FileNotFoundException e) {
-            System.out.println("File not found: " + filename + ". Creating a new file.");
-            saveToFile(filename);
-        } 
-        catch (Exception e) {
-            throw new Exception("Error loading portfolio: " + e.getMessage());
+        catch (SQLException e) {
+            throw new Exception("Error loading from DB: " + e.getMessage());
         } 
         finally {
-            if (fileScanner != null) {
-                fileScanner.close();
-            }
-            if (fileInput != null) {
-                fileInput.close();
+            if (conn != null) {
+                conn.close();
             }
         }
     }
 
     /**
-     *Saves portfolio data (balance and investments) to a file.
-     *@param filename the file name to save data to
-     *@throws Exception if there is a problem saving the file
+     *(ADDED) Saves portfolio data to the specified SQLite database, including realizedGains.
+     *@param dbPath path to the SQLite database.
+     *@throws Exception if there's a problem writing to the database.
      */
-    public void saveToFile(String filename) throws Exception {
-        PrintWriter writer = null;
-
+    public void saveToDatabase(String dbPath) throws Exception {
+        Connection conn = null;
         try {
-            writer = new PrintWriter(new FileOutputStream(new File(filename)));
-            //1) write the current balance
-            writer.println("CURRENT_BALANCE = \"" + this.startingBalance + "\"");
-            writer.println();
+            conn = DriverManager.getConnection("jdbc:sqlite:" + dbPath);
 
-            //2) write each investment.
-            for (Investment investment : investments) {
-                if (investment instanceof Stock) {
-                    writer.println("type = \"stock\"");
-                } 
-                else if (investment instanceof MutualFund) {
-                    writer.println("type = \"mutualfund\"");
-                }
+            try (Statement stmt = conn.createStatement()) {
+                //table for investments
+                stmt.executeUpdate("CREATE TABLE IF NOT EXISTS Investments (" +"symbol TEXT PRIMARY KEY," + "type TEXT," +"name TEXT," +"quantity INTEGER," +"price DOUBLE," +"bookValue DOUBLE" +");");
 
-                writer.println("symbol = \"" + investment.getSymbol() + "\"");
-                writer.println("name = \"" + investment.getName() + "\"");
-                writer.println("quantity = \"" + investment.getQuantity() + "\"");
-                writer.println("price = \"" + investment.getPrice() + "\"");
-                writer.println("bookValue = \"" + investment.getBookValue() + "\"");
-                writer.println();
+                //table for realized gains
+                stmt.executeUpdate("CREATE TABLE IF NOT EXISTS RealizedMeta (" +"id INTEGER PRIMARY KEY," +"realizedGains DOUBLE" +");");
+
+                //table for current balance
+                stmt.executeUpdate("CREATE TABLE IF NOT EXISTS BalanceMeta (" +"id INTEGER PRIMARY KEY," +"currentBalance DOUBLE" +");");
             }
 
-            System.out.println("Portfolio saved to " + filename);
+            //clr existing data in Investments table
+            try (Statement stmt = conn.createStatement()) {
+                stmt.executeUpdate("DELETE FROM Investments;");
+            }
+
+            //insert (or update) each investment
+            for (Investment inv : investments) {
+                String typeStr = (inv instanceof Stock) ? "Stock" : "MutualFund";
+                try (Statement stmt = conn.createStatement()) {
+                    String sql = "INSERT OR REPLACE INTO Investments (symbol,type,name,quantity,price,bookValue) " +
+                            "VALUES (" +"'" + inv.getSymbol().replace("'", "''") + "', " +"'" + typeStr + "', " +"'" + inv.getName().replace("'", "''") + "', " +
+                            inv.getQuantity() + ", " + inv.getPrice() + ", " + inv.getBookValue() + ");";
+                    stmt.executeUpdate(sql);
+                }
+            }
+
+            //upsert realizedGains
+            try (Statement stmt = conn.createStatement()) {
+                stmt.executeUpdate("INSERT INTO RealizedMeta (id, realizedGains) VALUES (1, " + this.realizedGains + ") " +
+                        "ON CONFLICT(id) DO UPDATE SET realizedGains=" + this.realizedGains + ";");
+            }
+
+            //upsert currentBalance
+            try (Statement stmt = conn.createStatement()) {
+                stmt.executeUpdate("INSERT INTO BalanceMeta (id, currentBalance) VALUES (1, " + this.startingBalance + ") " +
+                        "ON CONFLICT(id) DO UPDATE SET currentBalance=" + this.startingBalance + ";");
+            }
+
+            System.out.println("Portfolio saved to database: " + dbPath);
         } 
-        catch (FileNotFoundException e) {
-            throw new Exception("Error cannot save file to " + filename);
+        catch (SQLException e) {
+            throw new Exception("Error saving to DB: " + e.getMessage());
         } 
         finally {
-            if (writer != null) {
-                writer.close();
+            if (conn != null) {
+                conn.close();
             }
         }
     }
@@ -188,8 +190,8 @@ public class Portfolio {
 
     /**
      *Adds an investment's keywords to the keyword map.
-     *@param name name of the investment.
-     *@param investment investment to add.
+     * @param name name of the investment.
+     *  @param investment investment to add.
      */
     private void addToKeywordMap(String name, Investment investment) {
         StringTokenizer tokenizer = new StringTokenizer(name.toLowerCase());
@@ -204,7 +206,7 @@ public class Portfolio {
     }
 
     /**
-     *Removes an investment's keywords from the keyword map.
+     *Removes an invstment keywords from the keyword map.
      *@param name  name of the investment.
      *@param investment investment to remove.
      */
@@ -224,12 +226,12 @@ public class Portfolio {
 
     /**
      *Buys a new investment or adds to an existing one.
-     *@param type  type of investment ("Stock" or "Mutual Fund").
-     *@param symbol unique symbol for  investment.
+     * @param type  type of investment ("Stock" or "Mutual Fund").
+     * @param symbol unique symbol for  investment.
      *@param name Name of the investment.
-     *@param quantity Quantity to buy.
+     * @param quantity Quantity to buy.
      *@param price Price per unit.
-     *@return A message indicating the result of the operation.
+     * @return A message indicating the result of the operation.
      * @throws Exception if there is an error during the buy operation.
      */
     public String buy(String type, String symbol, String name, int quantity, double price) throws Exception {
@@ -246,11 +248,11 @@ public class Portfolio {
             throw new Exception("Price must be positive.");
         }
 
-        // Calculate base cost
+        //calc base cost
         double cost = price * quantity;
 
-        // Include commission or fee on buying:
-        // If it's a stock, add $9.99; if it's a mutual fund, add $45.00
+        //Include commission or fee on buying:
+        //If it's a stock, add $9.99; if it's a mutual fund, add $45.00
         if (type.equalsIgnoreCase("Stock")) {
             cost += 9.99;
         } 
@@ -277,15 +279,15 @@ public class Portfolio {
                 throw new Exception("Error: Investment with symbol " + symbol + " already exists with a different name.");
             }
 
-            // Update existing investment's quantity/price/bookValue
+            //update existing investment's quantity/price/bookValue
             existingInvestment.setQuantity(existingInvestment.getQuantity() + quantity);
             existingInvestment.setPrice(price);
             existingInvestment.setBookValue(
                 existingInvestment.getBookValue() + existingInvestment.calculateBookValue(quantity, price)
             );
 
-            // Auto-save changes
-            saveToFile("lib/investments.txt");
+            //autosave changes (to DB or file if you prefer)
+            saveToDatabase("lib/portfolio.db");
 
             return "Updated investment: " + existingInvestment + "\n";
         }
@@ -307,17 +309,17 @@ public class Portfolio {
         addToKeywordMap(name, newInvestment);
 
         //auto-save changes
-        saveToFile("lib/investments.txt");
+        saveToDatabase("lib/portfolio.db");
 
         return "Added new investment: " + newInvestment + "\n";
     }
 
     /**
      *Sells some or all of an investment.
-     *@param symbol The symbol of the investment to sell.
-     *@param sellQuantity The quantity to sell.
-     *@param sellPrice The price at which to sell each unit.
-     *@return A message indicating the result of the sale.
+     *@param symbol  symbol of the investment to sell.
+     *@param sellQuantity  quantity to sell.
+     *@param sellPrice  price at which to sell each unit.
+     *@return message indicating the result of the sale.
      *@throws Exception if there is an error during the sell operation.
      */
     public String sell(String symbol, int sellQuantity, double sellPrice) throws Exception {
@@ -347,7 +349,8 @@ public class Portfolio {
         //fees
         if (investment instanceof Stock) {
             payment -= 9.99;
-        } else if (investment instanceof MutualFund) {
+        } 
+        else if (investment instanceof MutualFund) {
             payment -= 45.00;
         }
         if (payment < 0) {
@@ -368,7 +371,7 @@ public class Portfolio {
             investment.setBookValue(newBookValue);
 
             //autosav -save changes
-            saveToFile("lib/investments.txt");
+            saveToDatabase("lib/portfolio.db");
 
             return "Payment received: $" + String.format("%.2f", payment) + "\nRealized gain from sale: $" + String.format("%.2f", realizedFromThisSale) + "\nUpdated investment: " + investment + "\n";
         } 
@@ -379,7 +382,7 @@ public class Portfolio {
             removeFromKeywordMap(investment.getName(), investment);
 
             //autosave changes
-            saveToFile("lib/investments.txt");
+            saveToDatabase("lib/portfolio.db");
 
             return "Payment received: $" + String.format("%.2f", payment) + "\nRealized gain from sale: $" + String.format("%.2f", realizedFromThisSale) + "\nInvestment sold completely and removed from portfolio.\n";
         }
@@ -402,8 +405,8 @@ public class Portfolio {
         Investment investment = investments.get(index);
         investment.setPrice(newPrice);
 
-        // Auto-save changes
-        saveToFile("lib/investments.txt");
+        //autosave changes
+        saveToDatabase("lib/portfolio.db");
 
         return "Updated investment: " + investment + "\n";
     }
@@ -518,4 +521,159 @@ public class Portfolio {
     public double getStartingBalance() {
         return startingBalance;
     }
+
+    //OLD CODE -  COMMENTED CODE RELATED TO FILE HANDLING SWITCHED TO DATABASE. 
+
+    /**
+     *Loads portfolio data liek balance and investments from a text file.
+     *  If the file doesnt exist it creates a new one.
+     *@param filename the file name to load data from
+     *@throws Exception if there is a problem reading the file
+     */
+
+     /* 
+    public void loadFromFile(String filename) throws Exception {
+        FileInputStream fileInput = null;
+        Scanner fileScanner = null;
+
+        try {
+            File file = new File(filename);
+            if (!file.exists()) {
+                //if file doesnt exist we must create a new one with default settings
+                saveToFile(filename);
+                System.out.println("File not found: " + filename + ". Created a new file.");
+                return;
+            }
+
+            fileInput = new FileInputStream(file);
+            fileScanner = new Scanner(fileInput);
+
+            boolean balanceLoaded = false;
+
+            //Parsing machine
+            while (fileScanner.hasNextLine()) {
+                String line = fileScanner.nextLine().trim();
+
+                if (line.isEmpty()) {
+                    continue; //skips empty lines
+                }
+                //ioff we detect the CURRENT_BALANCE line, parse it/
+                if (line.startsWith("CURRENT_BALANCE")) {
+                    String balanceValue = extractValue(line);
+                    this.startingBalance = Double.parseDouble(balanceValue);
+                    //sets realizedGains to 0 or do not override if you prefer persisting gains
+                    balanceLoaded = true;
+                    continue;
+                }
+
+                //If not the balance line, it should be an investment record. Wwewil expect multiple lines for each investment.
+                if (line.startsWith("type")) {
+                    //read 6 lines total: type, symbol, name, quantity, price, bookValue
+                    String typeLine = line;
+                    if (!fileScanner.hasNextLine()) break;
+                    String symbolLine = fileScanner.nextLine().trim();
+                    if (!fileScanner.hasNextLine()) break;
+                    String nameLine = fileScanner.nextLine().trim();
+                    if (!fileScanner.hasNextLine()) break;
+                    String quantityLine = fileScanner.nextLine().trim();
+                    if (!fileScanner.hasNextLine()) break;
+                    String priceLine = fileScanner.nextLine().trim();
+                    if (!fileScanner.hasNextLine()) break;
+                    String bookValueLine = fileScanner.nextLine().trim();
+
+                    String assetType = extractValue(typeLine);
+                    String symbol = extractValue(symbolLine);
+                    String name = extractValue(nameLine);
+                    int quantity = Integer.parseInt(extractValue(quantityLine));
+                    double price = Double.parseDouble(extractValue(priceLine));
+                    double bookValue = Double.parseDouble(extractValue(bookValueLine));
+
+                    Investment investment;
+                    if (assetType.equalsIgnoreCase("stock")) {
+                        investment = new Stock(symbol, name, quantity, price);
+                    } 
+                    else if (assetType.equalsIgnoreCase("mutualfund")) {
+                        investment = new MutualFund(symbol, name, quantity, price);
+                    } 
+                    else {
+                        continue; //skip invalid
+                    }
+
+                    investment.setBookValue(bookValue);
+                    investments.add(investment);
+                    symbolMap.put(symbol.toLowerCase(), investment);
+                    addToKeywordMap(name, investment);
+                }
+            }
+
+            if (!balanceLoaded) {
+                //if there's no balance line in file, default to 0
+                this.startingBalance = 0.0;
+            }
+
+            System.out.println("Portfolio info loaded from " + filename);
+
+        } 
+        catch (FileNotFoundException e) {
+            System.out.println("File not found: " + filename + ". Creating a new file.");
+            saveToFile(filename);
+        } 
+        catch (Exception e) {
+            throw new Exception("Error loading portfolio: " + e.getMessage());
+        } 
+        finally {
+            if (fileScanner != null) {
+                fileScanner.close();
+            }
+            if (fileInput != null) {
+                fileInput.close();
+            }
+        }
+    }
+    */
+
+    /**
+     *Saves portfolio data (balance and investments) to a file.
+     *@param filename the file name to save data to
+     *@throws Exception if there is a problem saving the file
+     */
+    /* 
+    public void saveToFile(String filename) throws Exception {
+        PrintWriter writer = null;
+
+        try {
+            writer = new PrintWriter(new FileOutputStream(new File(filename)));
+            //1) write the current balance
+            writer.println("CURRENT_BALANCE = \"" + this.startingBalance + "\"");
+            writer.println();
+
+            //2) write each investment.
+            for (Investment investment : investments) {
+                if (investment instanceof Stock) {
+                    writer.println("type = \"stock\"");
+                } 
+                else if (investment instanceof MutualFund) {
+                    writer.println("type = \"mutualfund\"");
+                }
+
+                writer.println("symbol = \"" + investment.getSymbol() + "\"");
+                writer.println("name = \"" + investment.getName() + "\"");
+                writer.println("quantity = \"" + investment.getQuantity() + "\"");
+                writer.println("price = \"" + investment.getPrice() + "\"");
+                writer.println("bookValue = \"" + investment.getBookValue() + "\"");
+                writer.println();
+            }
+
+            System.out.println("Portfolio saved to " + filename);
+        } 
+        catch (FileNotFoundException e) {
+            throw new Exception("Error cannot save file to " + filename);
+        } 
+        finally {
+            if (writer != null) {
+                writer.close();
+            }
+        }
+    }
+        */
 }
